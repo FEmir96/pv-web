@@ -1,0 +1,58 @@
+# === NODE / DEPENDENCIAS ===
+node_modules/
+*.tsbuildinfo
+*.lock
+
+# === LOGS / DEBUG ===
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# === DIST / COMPILADOS ===
+dist/
+dist-ssr/
+build/
+web-build/
+out/
+.next/
+
+# === ARCHIVOS DE ENTORNO ===
+.env*
+!.env.example
+
+# === EXPO / REACT NATIVE ===
+.expo/
+.expo-shared/
+android/
+ios/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+
+# === SISTEMA / MAC / IDE ===
+.DS_Store
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# === CONVEX ===
+.env.local
+
+# === OTROS ===
+*.orig.*
+*.pem
+
+# typescript
+*.next-env.d.ts
