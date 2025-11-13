@@ -1177,17 +1177,19 @@ export default function GameDetailPage() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-orange-400/30 via-teal-500/30 to-purple-600/30 rounded-lg p-6 text-center">
-                <h3 className="text-xl font-bold text-white mb-2">¿Quieres más?</h3>
-                <p className="text-white/90 text-sm mb-4">
-                  Con premium descubrí acceso ilimitado al catálogo y descuentos exclusivos
-                </p>
-                <Link href="/premium">
-                  <Button className="bg-white text-violet-800 hover:bg-slate-100 font-semibold">
-                    Descubre premium
-                  </Button>
-                </Link>
-              </div>
+              {profile?.role !== 'premium' && (
+                <div className="bg-gradient-to-br from-orange-400/30 via-teal-500/30 to-purple-600/30 rounded-lg p-6 text-center">
+                  <h3 className="text-xl font-bold text-white mb-2">¿Quieres más?</h3>
+                  <p className="text-white/90 text-sm mb-4">
+                    Con premium descubrí acceso ilimitado al catálogo y descuentos exclusivos
+                  </p>
+                  <Link href="/premium">
+                    <Button className="bg-white text-violet-800 hover:bg-slate-100 font-semibold">
+                      Descubre premium
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}

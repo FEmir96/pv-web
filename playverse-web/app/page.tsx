@@ -101,7 +101,7 @@ export default function HomePage() {
           <div className="bg-gradient-to-br from-orange-400/30 via-teal-500/30 to-purple-600/30 rounded-2xl p-8 md:p-12 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">¿Listo para una experiencia premium?</h2>
             <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
-              Catálogo ilimitado, descuentos exclusivos, cero publicidad y mucho más
+              Catálogo ilimitado, descuentos exclusivos, prioridad enservidores, cero publicidad y mucho más
             </p>
             <Link href="/premium">
               <Button size="lg" className="bg-white text-violet-800 hover:bg-gray-100 font-semibold px-8 py-3">

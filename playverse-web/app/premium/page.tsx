@@ -28,7 +28,7 @@ const premiumPlans = [
     period: "/mes",
     description: "Perfecto para probar la experiencia",
     popular: false,
-    features: ["Acceso a toda la biblioteca", "Descuentos del 10%", "Cero publicidad", "Soporte prioritario"],
+    features: ["Acceso a toda la biblioteca", "Descuentos del 10%", "Cero publicidad", "Prioridad en servidores cloud"],
   },
   {
     id: "annual",
@@ -38,7 +38,7 @@ const premiumPlans = [
     description: "Ahorra $30",
     popular: true,
     originalPrice: "$119.88",
-    features: ["La más conveniente", "3 meses gratis", "Todo lo de mensual", "Acceso anticipado a juegos"],
+    features: ["Todo lo de mensual", "La más conveniente", "3 meses gratis", "Soporte prioritario"],
   },
   // Renombrado desde "lifetime"
   {
@@ -48,7 +48,7 @@ const premiumPlans = [
     period: "/3 meses",
     description: "Equilibrio perfecto entre precio y flexibilidad",
     popular: false,
-    features: ["Mejor precio que mensual", "Todo lo de mensual", "Renovación cada 3 meses"],
+    features: ["Todo lo de mensual", "Mejor precio que mensual", "Renovación cada 3 meses"],
   },
 ];
 
@@ -180,7 +180,7 @@ export default function PremiumPage() {
   const handleFreeTrial = () => {
     if (!trialAvailable) {
       toast({
-        title: "Prueba gratuita no disponible",
+        title: "Prueba gratuita ya usada",
         description: role === "premium"
           ? "Tu cuenta ya es Premium."
           : "La prueba gratuita solo se puede usar una vez por cuenta.",
@@ -226,7 +226,7 @@ export default function PremiumPage() {
                 ? "bg-orange-400 hover:bg-orange-500 text-slate-900 font-semibold px-8 py-4 text-lg"
                 : "bg-slate-700 text-slate-400 font-semibold px-8 py-4 text-lg cursor-not-allowed"}
             >
-              {trialAvailable ? "Prueba gratuita de 7 dias" : "Prueba gratuita no disponible"}
+              {trialAvailable ? "Prueba gratuita de 7 dias" : "Prueba gratuita ya usada"}
             </Button>
             {trialAvailable && (
               <p className="text-slate-300 text-sm mt-3">

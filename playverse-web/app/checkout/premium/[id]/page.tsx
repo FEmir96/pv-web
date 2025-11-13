@@ -116,24 +116,24 @@ export default function PremiumCheckoutPage({ params }: { params: { id: string }
   }, [status, loginEmail, storeUser, router, pathname, sp]);
 
   // Perfil por ID (ruta fuerte)
-const profile = useQuery(
-  getUserByIdRef,
-  params?.id ? ({ id: params.id as Id<"profiles"> } as any) : "skip"
-) as
-  | (Record<string, any> & { _id: Id<"profiles">; role?: string; name?: string; email?: string })
-  | null
-  | undefined;
-const profileLoaded = profile !== undefined;
+  const profile = useQuery(
+    getUserByIdRef,
+    params?.id ? ({ id: params.id as Id<"profiles"> } as any) : "skip"
+  ) as
+    | (Record<string, any> & { _id: Id<"profiles">; role?: string; name?: string; email?: string })
+    | null
+    | undefined;
+  const profileLoaded = profile !== undefined;
 
-// Plan y helpers derivados de la URL
-const planKey = sp?.get("plan") ?? "monthly";
-const trial = sp?.get("trial") === "true";
-const plan = PLANS[planKey] ?? PLANS.monthly;
+  // Plan y helpers derivados de la URL
+  const planKey = sp?.get("plan") ?? "monthly";
+  const trial = sp?.get("trial") === "true";
+  const plan = PLANS[planKey] ?? PLANS.monthly;
 
-const nextParam = safeInternalNext(sp?.get("next") ?? null);
+  const nextParam = safeInternalNext(sp?.get("next") ?? null);
 
-const formatMoney = (n: number) =>
-  n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const formatMoney = (n: number) =>
+    n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
   const profileTrialUsed = Boolean((profile as any)?.freeTrialUsed);
   const profileTrialEndsAt =
@@ -185,7 +185,7 @@ const formatMoney = (n: number) =>
   const [number, setNumber] = useState("");
   const [exp, setExp] = useState("");
   const [cvc, setCvc] = useState("");
-  
+
   // Estados de validación
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showValidation, setShowValidation] = useState(false);
@@ -282,14 +282,14 @@ const formatMoney = (n: number) =>
     // Validación tarjeta nueva
     if (!useSaved) {
       const validation = validatePaymentForm({ holder, number, exp, cvc });
-      
+
       if (!validation.isValid) {
         const errors: Record<string, string> = {};
         validation.errors.forEach(error => {
           errors[error.field] = error.message;
         });
         setValidationErrors(errors);
-        
+
         toast({
           title: "Datos de tarjeta inválidos",
           description: "Por favor corrige los errores marcados en rojo.",
@@ -330,7 +330,7 @@ const formatMoney = (n: number) =>
       // 3) Toast futuro en success
       try {
         if (profile?.name) sessionStorage.setItem("pv_premium_welcome", profile.name);
-      } catch {}
+      } catch { }
 
       // 4) UX: si hay next, volvemos ahí; si no, success page
       if (nextParam) {
@@ -430,7 +430,7 @@ const formatMoney = (n: number) =>
                 </p>
 
                 <div className="space-y-2 mt-4">
-                  {["Acceso a toda la biblioteca", "Descuentos del 10%", "Cero publicidad"].map((feature, i) => (
+                  {["Acceso a toda la biblioteca", "Descuentos del 10%", "Cero publicidad", "Prioridad en servidores Cloud"].map((feature, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <svg className="w-5 h-5 text-teal-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path
@@ -488,11 +488,10 @@ const formatMoney = (n: number) =>
                         return (
                           <label
                             key={String(pm._id)}
-                            className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${
-                              methodId === String(pm._id)
-                                ? "border-orange-300 bg-orange-300/10"
-                                : "border-slate-700 hover:border-orange-300/60"
-                            }`}
+                            className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${methodId === String(pm._id)
+                              ? "border-orange-300 bg-orange-300/10"
+                              : "border-slate-700 hover:border-orange-300/60"
+                              }`}
                           >
                             <input
                               type="radio"
@@ -528,9 +527,8 @@ const formatMoney = (n: number) =>
                           }
                         }}
                         placeholder="Nombre en la tarjeta"
-                        className={`bg-slate-700/60 text-white mt-1 ${
-                          validationErrors.holder ? 'border-red-400' : 'border-slate-600'
-                        }`}
+                        className={`bg-slate-700/60 text-white mt-1 ${validationErrors.holder ? 'border-red-400' : 'border-slate-600'
+                          }`}
                       />
                       <ValidationError error={showValidation ? validationErrors.holder : undefined} />
                     </div>
@@ -551,9 +549,8 @@ const formatMoney = (n: number) =>
                           }
                         }}
                         placeholder="4111 1111 1111 1111"
-                        className={`bg-slate-700/60 text-white mt-1 ${
-                          validationErrors.number ? 'border-red-400' : 'border-slate-600'
-                        }`}
+                        className={`bg-slate-700/60 text-white mt-1 ${validationErrors.number ? 'border-red-400' : 'border-slate-600'
+                          }`}
                         inputMode="numeric"
                         autoComplete="cc-number"
                       />
@@ -576,9 +573,8 @@ const formatMoney = (n: number) =>
                             }
                           }}
                           placeholder="MM/YY"
-                          className={`bg-slate-700/60 text-white mt-1 ${
-                            validationErrors.exp ? 'border-red-400' : 'border-slate-600'
-                          }`}
+                          className={`bg-slate-700/60 text-white mt-1 ${validationErrors.exp ? 'border-red-400' : 'border-slate-600'
+                            }`}
                           inputMode="numeric"
                           autoComplete="cc-exp"
                         />
@@ -600,9 +596,8 @@ const formatMoney = (n: number) =>
                             }
                           }}
                           placeholder="123"
-                          className={`bg-slate-700/60 text-white mt-1 ${
-                            validationErrors.cvc ? 'border-red-400' : 'border-slate-600'
-                          }`}
+                          className={`bg-slate-700/60 text-white mt-1 ${validationErrors.cvc ? 'border-red-400' : 'border-slate-600'
+                            }`}
                           inputMode="numeric"
                           autoComplete="cc-csc"
                         />

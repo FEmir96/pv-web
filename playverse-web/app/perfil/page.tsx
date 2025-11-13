@@ -882,12 +882,12 @@ export default function ProfilePage() {
                           </p>
                         ) : null}
                         {trialActive && trialEndLabel && (
-                          <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 text-amber-100 text-sm p-3">
+                          <div className="mt-3 mb-2 rounded-lg border border-amber-400/30 bg-amber-500/10 text-amber-100 text-sm p-3">
                             Prueba gratuita activa hasta {trialEndLabel}. Si no cancelas antes de esa fecha, cobraremos el plan seleccionado de forma automatica.
                           </div>
                         )}
+                        <Badge className="bg-orange-400 text-slate-900 mt-2">Activo</Badge>
                       </div>
-                      <Badge className="bg-orange-400 text-slate-900">Activo</Badge>
                     </div>
                     {!isLifetimePlan ? (
                       <>

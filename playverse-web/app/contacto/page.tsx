@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast"
 const EMAIL_RE =
   /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i
 
-type Errors = Partial<Record<"nombre"|"email"|"asunto"|"mensaje", string>>
+type Errors = Partial<Record<"nombre" | "email" | "asunto" | "mensaje", string>>
 
 export default function ContactoPage() {
   const { toast } = useToast()
@@ -243,7 +243,7 @@ export default function ContactoPage() {
                   />
                   <FAQItem
                     question="¿Qué incluye la membresía Premium?"
-                    answer="Acceso ilimitado a nuestra biblioteca, descuentos exclusivos y cero publicidad."
+                    answer="Acceso ilimitado a nuestra biblioteca, prioridad en los servidores gaming cloud a la hora de jugar, descuentos exclusivos y cero publicidad."
                   />
                   <FAQItem
                     question="¿Puedo cancelar mi suscripción?"
