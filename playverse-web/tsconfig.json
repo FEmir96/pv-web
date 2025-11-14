@@ -21,11 +21,11 @@
     "paths": {
       "@/*": ["./*"],
 
-      "@convex": ["../convex/_generated/api"],
-      "@convex/_generated/*": ["../convex/_generated/*"],
-      "@convex/*": ["../convex/*"],
+      "@convex": ["./convex/_generated/api"],
+      "@convex/_generated/*": ["./convex/_generated/*"],
+      "@convex/*": ["./convex/*"],
 
-      "@/convex/*": ["../convex/*"],
+      "@/convex/*": ["./convex/*"],
         // ⬅️ clave para import "@/convex/_generated/dataModel"
     }
   },
@@ -35,7 +35,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
 
-    "../convex/_generated/**/*.d.ts"  // ⬅️ que TS "vea" los tipos de Convex
+    "./convex/_generated/**/*.d.ts"  // ⬅️ que TS "vea" los tipos de Convex
   ],
   "exclude": ["node_modules"]
 }
