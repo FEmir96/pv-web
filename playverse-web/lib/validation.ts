@@ -9,6 +9,12 @@ export interface ValidationResult {
     errors: ValidationError[];
 }
 
+const RELAX_CARD_VALIDATION =
+    process.env.NEXT_PUBLIC_RELAX_CARD_VALIDATION === "1" ||
+    process.env.NODE_ENV !== "production";
+
+export type CardBrand = "visa" | "mastercard" | "amex" | "otro";
+
 // Validación de nombre del titular
 export function validateCardHolder(holder: string): ValidationError | null {
     if (!holder || holder.trim().length === 0) {
@@ -50,8 +56,8 @@ export function validateCardNumber(number: string): ValidationError | null {
         return { field: 'number', message: 'El número de tarjeta debe tener entre 13 y 19 dígitos' };
     }
 
-    // Algoritmo de Luhn para validar tarjetas
-    if (!luhnCheck(cleanNumber)) {
+    // Algoritmo de Luhn para validar tarjetas (ignoramos en modo relajado)
+    if (!RELAX_CARD_VALIDATION && !luhnCheck(cleanNumber)) {
         return { field: 'number', message: 'El número de tarjeta no es válido' };
     }
 
@@ -202,6 +208,14 @@ export function detectCardType(cardNumber: string): string {
     if (/^6/.test(cleanNumber)) return 'discover';
 
     return 'unknown';
+}
+
+export function normalizeCardBrandFromNumber(cardNumber: string): CardBrand {
+    const detected = detectCardType(cardNumber);
+    if (detected === 'visa' || detected === 'mastercard' || detected === 'amex') {
+        return detected as CardBrand;
+    }
+    return 'otro';
 }
 
 // Validación de email
