@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
 import { useMutation } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
+import { api } from "@/convex/_generated/api"; // ✔️ BIEN
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 
