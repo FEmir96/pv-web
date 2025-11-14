@@ -56,3 +56,5 @@ ios/
 
 # typescript
 *.next-env.d.ts
+
+/convex
