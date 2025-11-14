@@ -14,11 +14,17 @@ import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ValidationError } from "@/components/ui/validation-error";
 import { useToast } from "@/hooks/use-toast";
-import { validatePaymentForm, validateRentalWeeks, formatExpirationInput } from "@/lib/validation";
+import {
+  validatePaymentForm,
+  validateRentalWeeks,
+  formatExpirationInput,
+  normalizeCardBrandFromNumber,
+  type CardBrand,
+} from "@/lib/validation";
 
 type PM = {
   _id: string;
-  brand: "visa" | "mastercard" | "amex" | "otro";
+  brand: CardBrand;
   last4: string;
   expMonth: number;
   expYear: number;
@@ -178,6 +184,8 @@ export default function RentCheckoutPage({ params }: { params: { id: string } })
   const [number, setNumber] = useState("");
   const [exp, setExp] = useState("");
   const [cvc, setCvc] = useState("");
+  const [cardBrand, setCardBrand] = useState<CardBrand>("visa");
+  const [cardBrandLocked, setCardBrandLocked] = useState(false);
 
   const [processing, setProcessing] = useState(false);
   
@@ -247,8 +255,145 @@ export default function RentCheckoutPage({ params }: { params: { id: string } })
     setUseSaved((methods?.length ?? 0) > 0);
   }, [methods]);
 
+  useEffect(() => {
+    setCvc((prev) => prev.slice(0, cardBrand === "amex" ? 4 : 3));
+  }, [cardBrand]);
+
   const brandLabel = (b: string) =>
     b === "visa" ? "Visa" : b === "mastercard" ? "Mastercard" : b === "amex" ? "Amex" : "Tarjeta";
+
+  const cardNumberPlaceholder = cardBrand === "amex" ? "3782 822463 10005" : "4111 1111 1111 1111";
+  const cvcPlaceholder = cardBrand === "amex" ? "1234" : "123";
+  const maxCvcLength = cardBrand === "amex" ? 4 : 3;
+
+  const renderManualCardForm = () => (
+    <>
+      <div>
+        <label className="text-slate-300 text-sm">Tipo de tarjeta</label>
+        <select
+          value={cardBrand}
+          onChange={(e) => {
+            setCardBrand(e.target.value as CardBrand);
+            setCardBrandLocked(true);
+          }}
+          className="bg-slate-700 border border-slate-600 text-white mt-1 w-full rounded-md px-3 py-2"
+        >
+          <option value="visa">Visa</option>
+          <option value="mastercard">Mastercard</option>
+          <option value="amex">American Express</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label className="text-slate-300 text-sm">Nombre del titular</label>
+        <Input
+          value={holder}
+          onChange={(e) => {
+            setHolder(e.target.value);
+            if (validationErrors.holder) {
+              setValidationErrors((prev) => {
+                const newErrors = { ...prev };
+                delete newErrors.holder;
+                return newErrors;
+              });
+            }
+          }}
+          placeholder="Nombre en la tarjeta"
+          className={`bg-slate-700 text-white mt-1 ${
+            validationErrors.holder ? "border-red-400" : "border-slate-600"
+          }`}
+        />
+        <ValidationError error={showValidation ? validationErrors.holder : undefined} />
+      </div>
+      <div>
+        <label className="text-slate-300 text-sm">Numero de tarjeta</label>
+        <Input
+          value={number}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "").slice(0, 19);
+            const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+            setNumber(formatted);
+            if (digits.length === 0) {
+              setCardBrand("visa");
+              setCardBrandLocked(false);
+            } else if (!cardBrandLocked) {
+              const detected = normalizeCardBrandFromNumber(digits);
+              if (detected !== cardBrand) {
+                setCardBrand(detected);
+              }
+            }
+            if (validationErrors.number) {
+              setValidationErrors((prev) => {
+                const newErrors = { ...prev };
+                delete newErrors.number;
+                return newErrors;
+              });
+            }
+          }}
+          placeholder={cardNumberPlaceholder}
+          className={`bg-slate-700 text-white mt-1 ${
+            validationErrors.number ? "border-red-400" : "border-slate-600"
+          }`}
+          inputMode="numeric"
+          autoComplete="cc-number"
+        />
+        <ValidationError error={showValidation ? validationErrors.number : undefined} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-slate-300 text-sm">Fecha de expiracion</label>
+          <Input
+            value={exp}
+            onChange={(e) => {
+              setExp(formatExpirationInput(e.target.value));
+              if (validationErrors.exp) {
+                setValidationErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors.exp;
+                  return newErrors;
+                });
+              }
+            }}
+            placeholder="MM/YY"
+            className={`bg-slate-700 text-white mt-1 ${
+              validationErrors.exp ? "border-red-400" : "border-slate-600"
+            }`}
+            inputMode="numeric"
+            autoComplete="cc-exp"
+          />
+          <ValidationError error={showValidation ? validationErrors.exp : undefined} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm">CVC</label>
+          <Input
+            type="password"
+            value={cvc}
+            onChange={(e) => {
+              setCvc(e.target.value.replace(/\D/g, "").slice(0, maxCvcLength));
+              if (validationErrors.cvc) {
+                setValidationErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors.cvc;
+                  return newErrors;
+                });
+              }
+            }}
+            placeholder={cvcPlaceholder}
+            className={`bg-slate-700 text-white mt-1 ${
+              validationErrors.cvc ? "border-red-400" : "border-slate-600"
+            }`}
+            inputMode="numeric"
+            autoComplete="cc-csc"
+          />
+          <ValidationError error={showValidation ? validationErrors.cvc : undefined} />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 pt-1">
+        <Checkbox checked={rememberNew} onCheckedChange={(v) => setRememberNew(v === true)} />
+        <span className="text-slate-300 text-sm">Guardar metodo de pago</span>
+      </div>
+    </>
+  );
 
   const onRent = async () => {
     if (processing) return;
@@ -323,7 +468,7 @@ export default function RentCheckoutPage({ params }: { params: { id: string } })
           fullNumber: number,
           exp,
           cvv: cvc,
-          brand: undefined,
+          brand: cardBrand,
         } as any);
       }
 
@@ -496,214 +641,13 @@ export default function RentCheckoutPage({ params }: { params: { id: string } })
                   </div>
                 )
               ) : (
-                <>
-                  <div>
-                    <label className="text-slate-300 text-sm">Nombre del titular</label>
-                    <Input 
-                      value={holder} 
-                      onChange={(e) => {
-                        setHolder(e.target.value);
-                        // Limpiar error al escribir
-                        if (validationErrors.holder) {
-                          setValidationErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.holder;
-                            return newErrors;
-                          });
-                        }
-                      }} 
-                      placeholder="Nombre en la tarjeta" 
-                      className={`bg-slate-700 text-white mt-1 ${
-                        validationErrors.holder ? 'border-red-400' : 'border-slate-600'
-                      }`} 
-                    />
-                    <ValidationError error={showValidation ? validationErrors.holder : undefined} />
-                  </div>
-                  <div>
-                    <label className="text-slate-300 text-sm">Número de tarjeta</label>
-                    <Input
-                      value={number}
-                      onChange={(e) => {
-                        const d = e.target.value.replace(/\D/g, "").slice(0, 19);
-                        setNumber(d.replace(/(\d{4})(?=\d)/g, "$1 ").trim());
-                        // Limpiar error al escribir
-                        if (validationErrors.number) {
-                          setValidationErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.number;
-                            return newErrors;
-                          });
-                        }
-                      }}
-                      placeholder="4111 1111 1111 1111"
-                      className={`bg-slate-700 text-white mt-1 ${
-                        validationErrors.number ? 'border-red-400' : 'border-slate-600'
-                      }`}
-                      inputMode="numeric"
-                      autoComplete="cc-number"
-                    />
-                    <ValidationError error={showValidation ? validationErrors.number : undefined} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-slate-300 text-sm">Fecha de expiración</label>
-                      <Input
-                        value={exp}
-                        onChange={(e) => {
-                          setExp(formatExpirationInput(e.target.value));
-                          // Limpiar error al escribir
-                          if (validationErrors.exp) {
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.exp;
-                              return newErrors;
-                            });
-                          }
-                        }}
-                        placeholder="MM/YY"
-                        className={`bg-slate-700 text-white mt-1 ${
-                          validationErrors.exp ? 'border-red-400' : 'border-slate-600'
-                        }`}
-                        inputMode="numeric"
-                        autoComplete="cc-exp"
-                      />
-                      <ValidationError error={showValidation ? validationErrors.exp : undefined} />
-                    </div>
-                    <div>
-                      <label className="text-slate-300 text-sm">CVC</label>
-                      <Input 
-                        value={cvc} 
-                        onChange={(e) => {
-                          setCvc(e.target.value.replace(/\D/g, "").slice(0, 3));
-                          // Limpiar error al escribir
-                          if (validationErrors.cvc) {
-                            setValidationErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.cvc;
-                              return newErrors;
-                            });
-                          }
-                        }} 
-                        placeholder="123" 
-                        className={`bg-slate-700 text-white mt-1 ${
-                          validationErrors.cvc ? 'border-red-400' : 'border-slate-600'
-                        }`} 
-                        inputMode="numeric" 
-                        autoComplete="cc-csc" 
-                      />
-                      <ValidationError error={showValidation ? validationErrors.cvc : undefined} />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <Checkbox checked={rememberNew} onCheckedChange={(v) => setRememberNew(v === true)} />
-                    <span className="text-slate-300 text-sm">Guardar método de pago</span>
-                  </div>
-                </>
+                renderManualCardForm()
               )}
             </div>
           ) : (
             <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-3">
-              <div>
-                <label className="text-slate-300 text-sm">Nombre del titular</label>
-                <Input 
-                  value={holder} 
-                  onChange={(e) => {
-                    setHolder(e.target.value);
-                    // Limpiar error al escribir
-                    if (validationErrors.holder) {
-                      setValidationErrors(prev => {
-                        const newErrors = { ...prev };
-                        delete newErrors.holder;
-                        return newErrors;
-                      });
-                    }
-                  }} 
-                  placeholder="Nombre en la tarjeta" 
-                  className={`bg-slate-700 text-white mt-1 ${
-                    validationErrors.holder ? 'border-red-400' : 'border-slate-600'
-                  }`} 
-                />
-                <ValidationError error={showValidation ? validationErrors.holder : undefined} />
-              </div>
-              <div>
-                <label className="text-slate-300 text-sm">Número de tarjeta</label>
-                <Input
-                  value={number}
-                  onChange={(e) => {
-                    const d = e.target.value.replace(/\D/g, "").slice(0, 19);
-                    setNumber(d.replace(/(\d{4})(?=\d)/g, "$1 ").trim());
-                    // Limpiar error al escribir
-                    if (validationErrors.number) {
-                      setValidationErrors(prev => {
-                        const newErrors = { ...prev };
-                        delete newErrors.number;
-                        return newErrors;
-                      });
-                    }
-                  }}
-                  placeholder="4111 1111 1111 1111"
-                  className={`bg-slate-700 text-white mt-1 ${
-                    validationErrors.number ? 'border-red-400' : 'border-slate-600'
-                  }`}
-                  inputMode="numeric"
-                  autoComplete="cc-number"
-                />
-                <ValidationError error={showValidation ? validationErrors.number : undefined} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-300 text-sm">Fecha de expiración</label>
-                  <Input
-                    value={exp}
-                    onChange={(e) => {
-                      setExp(formatExpirationInput(e.target.value));
-                      // Limpiar error al escribir
-                      if (validationErrors.exp) {
-                        setValidationErrors(prev => {
-                          const newErrors = { ...prev };
-                          delete newErrors.exp;
-                          return newErrors;
-                        });
-                      }
-                    }}
-                    placeholder="MM/YY"
-                    className={`bg-slate-700 text-white mt-1 ${
-                      validationErrors.exp ? 'border-red-400' : 'border-slate-600'
-                    }`}
-                    inputMode="numeric"
-                    autoComplete="cc-exp"
-                  />
-                  <ValidationError error={showValidation ? validationErrors.exp : undefined} />
-                </div>
-                <div>
-                  <label className="text-slate-300 text-sm">CVC</label>
-                  <Input 
-                    value={cvc} 
-                    onChange={(e) => {
-                      setCvc(e.target.value.replace(/\D/g, "").slice(0, 3));
-                      // Limpiar error al escribir
-                      if (validationErrors.cvc) {
-                        setValidationErrors(prev => {
-                          const newErrors = { ...prev };
-                          delete newErrors.cvc;
-                          return newErrors;
-                        });
-                      }
-                    }} 
-                    placeholder="123" 
-                    className={`bg-slate-700 text-white mt-1 ${
-                      validationErrors.cvc ? 'border-red-400' : 'border-slate-600'
-                    }`} 
-                    inputMode="numeric" 
-                    autoComplete="cc-csc" 
-                  />
-                  <ValidationError error={showValidation ? validationErrors.cvc : undefined} />
-                </div>
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <Checkbox checked={rememberNew} onCheckedChange={(v) => setRememberNew(v === true)} />
-                <span className="text-slate-300 text-sm">Guardar método de pago</span>
-              </div>
+              {renderManualCardForm()}
+
             </div>
           )}
 
