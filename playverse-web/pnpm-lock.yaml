@@ -117,7 +117,7 @@ importers:
         specifier: 1.0.4
         version: 1.0.4(@types/react-dom@18.3.7(@types/react@18.3.26))(@types/react@18.3.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       convex:
-        specifier: 1.27.3
+        specifier: ^1.27.3
         version: 1.27.3(react@18.3.1)
       date-fns:
         specifier: 4.1.0
