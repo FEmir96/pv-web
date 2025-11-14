@@ -64,6 +64,27 @@ const premiumBenefits = [
   },
   {
     icon: (
+      <svg
+        className="w-8 h-8"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 3v11m0 0l-4-4m4 4l4-4M5 19h14"
+        />
+      </svg>
+
+    ),
+    title: "Prioridad en servidores",
+    description: "Prioridad en nuestros servidores cloud gaming para una mejor experiencia",
+  },
+  {
+    icon: (
       <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
         <path
           fillRule="evenodd"
@@ -244,7 +265,7 @@ export default function PremiumPage() {
           <p className="text-slate-400 text-lg">Descubre todos los beneficios que tenemos para ti</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {premiumBenefits.map((benefit, index) => (
             <div key={index} className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-400/20 border border-orange-400/30 rounded-full text-orange-400 mb-4">
