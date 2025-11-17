@@ -1,4 +1,4 @@
-﻿// convex/auth.ts
+// convex/auth.ts
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import bcrypt from "bcryptjs";
@@ -27,7 +27,7 @@ export const updateProfile = mutation({
     }
     if (typeof newPassword === "string" && newPassword.length > 0) {
       if (newPassword.length < MIN_PASSWORD_LENGTH) {
-        throw new Error("La contraseña debe tener al menos 6 caracteres");
+        throw new Error("La contrasena debe tener al menos 6 caracteres");
       }
       patch.passwordHash = bcrypt.hashSync(newPassword, 10);
     }
@@ -52,7 +52,7 @@ export const createUser = mutation({
       .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
       .unique();
     if (exists) {
-      return { ok: false, error: "El email ya está registrado" } as const;
+      return { ok: false, error: "El email ya esta registrado" } as const;
     }
     const passwordHash = bcrypt.hashSync(password, 10);
     const now = Date.now();
@@ -61,12 +61,13 @@ export const createUser = mutation({
       name,
       email: normalizedEmail,
       role,
+      status: "Activo",
       createdAt: now,
       passwordHash,
       freeTrialUsed: false,
       avatarUrl,
     });
-    return { ok: true, profile: { _id, name, email: normalizedEmail, role, createdAt: now } } as const;
+    return { ok: true, profile: { _id, name, email: normalizedEmail, role, status: "Activo", createdAt: now } } as const;
   },
 });
 
@@ -80,14 +81,19 @@ export const authLogin = mutation({
       .unique();
 
     if (!user) return { ok: false, error: "Usuario no encontrado" } as const;
+
+    if ((user as any).status === "Baneado") {
+      return { ok: false, error: "ACCOUNT_BANNED" } as const;
+    }
+
     if (!user.passwordHash) {
-      return { ok: false, error: "La cuenta no tiene contraseña configurada. Prueba a ingresar con google/xbox o reseteá tu contraseña." } as const;
+      return { ok: false, error: "La cuenta no tiene contrasena configurada. Prueba a ingresar con google/xbox o resetea tu contrasena." } as const;
     }
     const match = bcrypt.compareSync(password, user.passwordHash);
-    if (!match) return { ok: false, error: "Credenciales inválidas" } as const;
+    if (!match) return { ok: false, error: "Credenciales invalidas" } as const;
 
-    const { _id, name, role, createdAt } = user;
-    return { ok: true, profile: { _id, name, email: user.email, role, createdAt } } as const;
+    const { _id, name, role, createdAt, status } = user as any;
+    return { ok: true, profile: { _id, name, email: user.email, role, status: status ?? "Activo", createdAt } } as const;
   },
 });
 
@@ -113,6 +119,7 @@ export const oauthUpsert = mutation({
         name: args.name ?? "",
         email,
         role: "free",
+        status: "Activo",
         createdAt: Date.now(),
         passwordHash: undefined,
         avatarUrl: fallbackAvatar,
@@ -127,8 +134,7 @@ export const oauthUpsert = mutation({
     if (!hasAvatar) {
       patch.avatarUrl = args.avatarUrl ?? randomAvatarUrl(email);
     }
-
-    if (Object.keys(patch).length) {
+    if (Object.keys(patch).length > 0) {
       await db.patch(existing._id, patch);
     }
     return { created: false, _id: existing._id };
@@ -255,4 +261,3 @@ export const changePassword = mutation({
     return { ok: true as const };
   },
 });
-

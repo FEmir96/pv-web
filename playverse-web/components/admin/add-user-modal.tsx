@@ -16,7 +16,7 @@ interface AddUserModalProps {
     email: string;
     password: string;
     role: "free" | "premium" | "admin";
-    // status NO se envía; es sólo visual en este modal
+    status: "Activo" | "Baneado";
   }) => void;
 }
 
@@ -26,33 +26,31 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "free" as "free" | "premium" | "admin", // valores reales del schema
-    status: "Activo", // sólo visual
+    role: "free" as "free" | "premium" | "admin",
+    status: "Activo" as "Activo" | "Baneado",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Las contraseñas no coinciden");
+      alert("Las contrasenas no coinciden");
       return;
     }
 
-    // Normalizamos el rol a valores válidos del schema, en minúsculas
     const normalizedRole: "free" | "premium" | "admin" =
       formData.role === "admin" || formData.role === "premium" || formData.role === "free"
         ? formData.role
         : "free";
 
-    // Enviamos únicamente los campos del schema (status queda fuera)
     onSave({
       username: formData.username,
       email: formData.email,
       password: formData.password,
       role: normalizedRole,
+      status: formData.status,
     });
 
-    // Reset
     setFormData({
       username: "",
       email: "",
@@ -69,7 +67,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-slate-800 border-orange-400 text-orange-400 max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-orange-400 text-xl font-bold text-center">Añadir usuario</DialogTitle>
+          <DiAnadir usuario</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -96,9 +94,8 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
             />
           </div>
 
-          {/* Passwords */}
           <div>
-            <Label className="text-orange-400 mb-2 block">Contraseña</Label>
+            <Label className="text-orange-400 mb-2 block">Contrasena</Label>
             <Input
               type="password"
               placeholder="********"
@@ -110,7 +107,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
           </div>
 
           <div>
-            <Label className="text-orange-400 mb-2 block">Repetir contraseña</Label>
+            <Label className="text-orange-400 mb-2 block">Repetir contrasena</Label>
             <Input
               type="password"
               placeholder="********"
@@ -122,7 +119,6 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Rol: valores del schema en minúsculas */}
             <div>
               <Label className="text-orange-400 mb-2 block">Rol</Label>
               <Select
@@ -135,26 +131,35 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="free" className="text-orange-400">free</SelectItem>
-                  <SelectItem value="premium" className="text-orange-400">premium</SelectItem>
-                  <SelectItem value="admin" className="text-orange-400">admin</SelectItem>
+                  <SelectItem value="free" className="text-orange-400">
+                    free
+                  </SelectItem>
+                  <SelectItem value="premium" className="text-orange-400">
+                    premium
+                  </SelectItem>
+                  <SelectItem value="admin" className="text-orange-400">
+                    admin
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Estado: visual (no se envía al backend) */}
             <div>
-              <Label className="text-orange-400 mb-2 block">Estado (visual)</Label>
+              <Label className="text-orange-400 mb-2 block">Estado</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
+                onValueChange={(value) => setFormData({ ...formData, status: value as "Activo" | "Baneado" })}
               >
                 <SelectTrigger className="bg-slate-900 border-slate-700 text-orange-400">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="Activo" className="text-orange-400">Activo</SelectItem>
-                  <SelectItem value="Baneado" className="text-orange-400">Baneado</SelectItem>
+                  <SelectItem value="Activo" className="text-orange-400">
+                    Activo
+                  </SelectItem>
+                  <SelectItem value="Baneado" className="text-orange-400">
+                    Baneado
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

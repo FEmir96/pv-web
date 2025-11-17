@@ -1,51 +1,61 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface EditUserModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (userData: any) => void
-  user: any
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (userData: any) => void;
+  user: any;
 }
 
 export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalProps) {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
-    role: "free",     // <- default válido según schema
-    status: "Activo", // <- sólo visual; no se guarda en Convex
-  })
+    role: "free" as "free" | "premium" | "admin",
+    status: "Activo" as "Activo" | "Baneado",
+  });
 
   useEffect(() => {
     if (user) {
       setFormData({
         username: user.name || "",
         email: user.email || "",
-        // normalizamos a minúsculas válidas del schema
-        role: (user.role === "admin" || user.role === "premium" || user.role === "free") ? user.role : "free",
-        status: user.status || "Activo",
-      })
+        role:
+          user.role === "admin" || user.role === "premium" || user.role === "free"
+            ? user.role
+            : "free",
+        status: user.status === "Baneado" ? "Baneado" : "Activo",
+      });
     }
-  }, [user])
+  }, [user]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave({ ...user, ...formData })
-    onClose()
-  }
+    e.preventDefault();
+    const normalizedRole: "free" | "premium" | "admin" =
+      formData.role === "admin" || formData.role === "premium" || formData.role === "free"
+        ? formData.role
+        : "free";
+    const normalizedStatus: "Activo" | "Baneado" =
+      formData.status === "Baneado" ? "Baneado" : "Activo";
+    onSave({ ...user, ...formData, role: normalizedRole, status: normalizedStatus });
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-slate-800 border-orange-400 text-orange-400 max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-orange-400 text-xl font-bold text-center">Editar usuario</DialogTitle>
+          <DialogTitle className="text-orange-400 text-xl font-bold text-center">
+            Editar usuario
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -75,31 +85,43 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
               <Label className="text-orange-400 mb-2 block">Rol</Label>
               <Select
                 value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
+                onValueChange={(value) => setFormData({ ...formData, role: value as "free" | "premium" | "admin" })}
               >
                 <SelectTrigger className="bg-slate-900 border-slate-700 text-orange-400">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="free" className="text-orange-400">free</SelectItem>
-                  <SelectItem value="premium" className="text-orange-400">premium</SelectItem>
-                  <SelectItem value="admin" className="text-orange-400">admin</SelectItem>
+                  <SelectItem value="free" className="text-orange-400">
+                    free
+                  </SelectItem>
+                  <SelectItem value="premium" className="text-orange-400">
+                    premium
+                  </SelectItem>
+                  <SelectItem value="admin" className="text-orange-400">
+                    admin
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label className="text-orange-400 mb-2 block">Estado (visual)</Label>
+              <Label className="text-orange-400 mb-2 block">Estado</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, status: value as "Activo" | "Baneado" })
+                }
               >
                 <SelectTrigger className="bg-slate-900 border-slate-700 text-orange-400">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="Activo" className="text-orange-400">Activo</SelectItem>
-                  <SelectItem value="Baneado" className="text-orange-400">Baneado</SelectItem>
+                  <SelectItem value="Activo" className="text-orange-400">
+                    Activo
+                  </SelectItem>
+                  <SelectItem value="Baneado" className="text-orange-400">
+                    Baneado
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -111,5 +133,5 @@ export function EditUserModal({ isOpen, onClose, onSave, user }: EditUserModalPr
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

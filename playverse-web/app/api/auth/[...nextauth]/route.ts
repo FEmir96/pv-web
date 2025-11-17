@@ -33,16 +33,19 @@ if (!microsoftClientId || !microsoftClientSecret) {
   );
 }
 
-async function getRoleByEmail(email?: string | null) {
-  if (!email) return "free";
+async function getProfileByEmail(email?: string | null) {
+  if (!email) return { role: "free", status: "Activo" as const };
   try {
     const profile = await convex.query(
       api.queries.getUserByEmail.getUserByEmail as any,
       { email }
     );
-    return (profile as any)?.role ?? "free";
+    return {
+      role: (profile as any)?.role ?? "free",
+      status: (profile as any)?.status ?? "Activo",
+    };
   } catch {
-    return "free";
+    return { role: "free", status: "Activo" as const };
   }
 }
 
@@ -54,7 +57,6 @@ export const authOptions: AuthOptions = {
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-
       allowDangerousEmailAccountLinking: true,
     }),
 
@@ -79,14 +81,19 @@ export const authOptions: AuthOptions = {
           email: String(creds.email).toLowerCase().trim(),
           password: String(creds.password),
         });
-        if (!res?.ok) return null;
-        const p = res.profile;
-        // IMPORTANTE: no incluir picture/image para no inflar el JWT
+        if (!res?.ok) {
+          throw new Error(res?.error ?? "Credenciales invalidas");
+        }
+        const p = res.profile as any;
+        if (p?.status === "Baneado") {
+          throw new Error("ACCOUNT_BANNED");
+        }
         return {
           id: String(p._id),
           name: p.name ?? "",
           email: p.email,
           role: p.role ?? "free",
+          status: p.status ?? "Activo",
         } as any;
       },
     }),
@@ -99,32 +106,34 @@ export const authOptions: AuthOptions = {
         await convex.mutation(api.auth.oauthUpsert as any, {
           email: user.email,
           name: user.name ?? "",
-          // OJO: no dependemos del avatar acá; se maneja desde tu perfil.
           avatarUrl: undefined,
           provider: account?.provider ?? "unknown",
           providerId: account?.providerAccountId ?? undefined,
         });
+        const profile = await getProfileByEmail(user.email);
+        if (profile.status === "Baneado") {
+          return "/auth/login?error=ACCOUNT_BANNED";
+        }
         return true;
       } catch (err) {
         console.error("oauthUpsert failed:", err);
-        return true;
+        return "/auth/login?error=AUTH_ERROR";
       }
     },
 
-    // JWT minimalista: solo id/email/name/role. Nada de imágenes ni objetos grandes.
     async jwt({ token, user }) {
       if (user) {
         (token as any).role = (user as any).role ?? (token as any).role ?? "free";
+        (token as any).status = (user as any).status ?? (token as any).status ?? "Activo";
         token.email = user.email ?? token.email;
         token.name = user.name ?? token.name;
         token.sub = (user as any).id ?? token.sub;
       }
 
-      // Refrescar role desde Convex por si cambió
-      const role = await getRoleByEmail(token.email as string | undefined);
-      (token as any).role = role ?? (token as any).role ?? "free";
+      const profile = await getProfileByEmail(token.email as string | undefined);
+      (token as any).role = profile.role ?? (token as any).role ?? "free";
+      (token as any).status = profile.status ?? (token as any).status ?? "Activo";
 
-      // Sanear posibles arrastres de sesiones viejas
       if ("picture" in (token as any)) delete (token as any).picture;
       if ("image" in (token as any)) delete (token as any).image;
 
@@ -136,8 +145,7 @@ export const authOptions: AuthOptions = {
         session.user.email = token.email as string;
         session.user.name = token.name as string;
         (session.user as any).role = (token as any).role ?? "free";
-        // No seteamos image desde token para no depender del JWT
-        // El front puede leer avatar desde Convex (getUserByEmail) cuando lo necesite.
+        (session.user as any).status = (token as any).status ?? "Activo";
       }
       return session;
     },
@@ -150,8 +158,3 @@ export const authOptions: AuthOptions = {
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
-
-
-
-
-

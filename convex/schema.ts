@@ -7,6 +7,7 @@ export default defineSchema({
     name: v.string(),
     email: v.string(),
     role: v.union(v.literal("free"), v.literal("premium"), v.literal("admin")),
+    status: v.optional(v.union(v.literal("Activo"), v.literal("Baneado"))),
     createdAt: v.number(),
     passwordHash: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),

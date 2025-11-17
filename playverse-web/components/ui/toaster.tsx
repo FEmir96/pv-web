@@ -12,14 +12,7 @@ import {
   ToastViewport,
 } from "@/components/ui/toast";
 
-// Barra de progreso del toast
-function Progress({
-  duration = 4000,
-  color = "#ffb900",
-}: {
-  duration?: number;
-  color?: string;
-}) {
+function Progress({ duration = 4000, color = "#ffb900" }: { duration?: number; color?: string }) {
   const [width, setWidth] = useState(100);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setWidth(0));
@@ -43,9 +36,7 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(({ id, title, description, action, ...props }) => {
-        // duración por defecto
         const duration = (props as any).duration ?? 4000;
-        // color dinámico de barra (por defecto naranja)
         const barColor = (props as any)["data-bar"] ?? "#ffb900";
 
         return (
@@ -73,11 +64,12 @@ export function Toaster() {
         );
       })}
 
-      {/* Posición: arriba-centro levemente a la izquierda (como pediste) */}
       <ToastViewport
         className="
-          fixed top-4 left-[38%] -translate-x-1/2 z-[100]
-          flex w-[92vw] max-w-[420px] flex-col gap-2 p-0"
+          fixed top-3 left-1/2 -translate-x-1/2 z-[100]
+          flex w-[calc(100vw-1rem)] max-w-[520px] flex-col gap-3 p-0
+          sm:top-4 sm:w-[92vw]
+        "
       />
     </ToastProvider>
   );

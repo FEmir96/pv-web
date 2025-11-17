@@ -141,6 +141,11 @@ export default function AfterAuthPage() {
     const finalWithFlags = (d: string) =>
       authFlag === "ok" ? withWelcomeFlags(d, provider) : d;
 
+    if (loginEmail && profile && (profile as any).status === "Baneado") {
+      go("/auth/login?error=ACCOUNT_BANNED", "account-banned");
+      return;
+    }
+
     if (needsProfileFor(next)) {
       pushTrace("ROLE_SENSITIVE", { next, haveEmail: !!loginEmail, profileType: typeof profile });
       if (!loginEmail) return;
