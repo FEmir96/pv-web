@@ -66,9 +66,10 @@ export function Toaster() {
 
       <ToastViewport
         className="
-          fixed top-3 left-1/2 -translate-x-1/2 z-[100]
-          flex w-[calc(100vw-1rem)] max-w-[520px] flex-col gap-3 p-0
-          sm:top-4 sm:w-[92vw]
+          fixed top-3 inset-x-0 z-[100] flex flex-col gap-3
+          w-full px-4
+          sm:top-4
+          md:px-0 md:left-1/2 md:-translate-x-1/2 md:w-[92vw] md:max-w-[520px]
         "
       />
     </ToastProvider>
