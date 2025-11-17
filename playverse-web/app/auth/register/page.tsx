@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
 import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api"; // Ã¢Å“â€Ã¯Â¸Â BIEN
+import { api } from "@/convex/_generated/api"; // ✅ BIEN
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,18 +28,18 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const [oauthPending, setOauthPending] = useState(false); // Ã¢Â¬â€¦Ã¯Â¸Â nuevo
+  const [oauthPending, setOauthPending] = useState(false); // nuevo
 
   const createUser = useMutation(api.auth.createUser);
 
-  // Ã¢Å“â€¦ destino seguro
+  // destino seguro
   const nextUrl = useMemo(() => {
     const raw = searchParams?.get("next") || "/";
     const decoded = raw ? decodeURIComponent(raw) : "/";
     return decoded.startsWith("/") ? decoded : "/";
   }, [searchParams]);
 
-  // Ã¢Å“â€¦ si hay sesiÃƒÂ³n en Register, nunca nos quedamos aquÃƒÂ­:
+  // Si hay sesión en Register, nunca nos quedamos aquí:
   useEffect(() => {
     if (status !== "authenticated") return;
 
@@ -49,8 +49,8 @@ export default function RegisterPage() {
 
     if (fromOAuth) {
       toast({
-        title: `Ã‚Â¡Bienvenido, ${name}!`,
-        description: "Inicio de sesiÃƒÂ³n exitoso.",
+        title: `¡Bienvenido, ${name}!`,
+        description: "Inicio de sesión exitoso.",
       });
       const t = setTimeout(() => router.replace(dest), 650);
       return () => clearTimeout(t);
@@ -71,9 +71,9 @@ export default function RegisterPage() {
     setError("");
 
     if (!canSubmit) {
-      if (!termsOk) alert("Debes aceptar los tÃƒÂ©rminos y condiciones");
-      else if (!matchOk) alert("Las contraseÃƒÂ±as no coinciden");
-      else if (!passOk) alert("La contraseÃƒÂ±a debe tener al menos 6 caracteres");
+      if (!termsOk) alert("Debes aceptar los términos y condiciones");
+      else if (!matchOk) alert("Las contraseñas no coinciden");
+      else if (!passOk) alert("La contraseña debe tener al menos 6 caracteres");
       else alert("Revisa los datos del formulario");
       return;
     }
@@ -98,7 +98,7 @@ export default function RegisterPage() {
   // callback de vuelta para que Register maneje el toast y salida
   const oauthCallback = `/auth/register?oauth=1&next=${encodeURIComponent(nextUrl)}`;
 
-  // Ã¢Â¬â€¡Ã¯Â¸Â handlers OAuth con bloqueo de doble click
+  // handlers OAuth con bloqueo de doble click
   const oauthGoogle = () => {
     if (oauthPending || pending) return;
     setOauthPending(true);
@@ -130,7 +130,7 @@ export default function RegisterPage() {
             />
           </div>
           <h1 className="text-4xl font-bold text-orange-400 mb-2">PLAYVERSE</h1>
-          <p className="text-slate-300">ÃƒÅ¡nete y elige tu prÃƒÂ³xima aventura</p>
+          <p className="text-slate-300">Únete y elige tu próxima aventura</p>
         </div>
 
         <div className="bg-slate-800/50 border border-orange-400/30 rounded-lg p-6">
@@ -143,7 +143,7 @@ export default function RegisterPage() {
             <h2 className="text-xl font-semibold text-orange-400">Crear cuenta</h2>
           </div>
 
-          <p className="text-slate-400 text-center mb-6">ÃƒÅ¡nete a la comunidad gamer</p>
+          <p className="text-slate-400 text-center mb-6">Únete a la comunidad gamer</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -169,15 +169,15 @@ export default function RegisterPage() {
                 required
               />
               {formData.email.length > 0 && !emailOk && (
-                <p className="text-xs text-red-400 mt-1">Email invÃƒÂ¡lido</p>
+                <p className="text-xs text-red-400 mt-1">Email inválido</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">ContraseÃƒÂ±a</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Contraseña</label>
               <Input
                 type="password"
-                placeholder="MÃƒÂ­nimo 6 caracteres"
+                placeholder="Mínimo 6 caracteres"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-orange-400"
@@ -186,10 +186,10 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Confirmar contraseÃƒÂ±a</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Confirmar contraseña</label>
               <Input
                 type="password"
-                placeholder="Repite tu contraseÃƒÂ±a"
+                placeholder="Repite tu contraseña"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-orange-400"
@@ -212,7 +212,7 @@ export default function RegisterPage() {
               <label htmlFor="terms" className="text-sm text-slate-300">
                 Acepto los{" "}
                 <Link href="/terms" className="text-orange-400 hover:text-orange-300">
-                  TÃƒÂ©rminos y condiciones
+                  Términos y condiciones
                 </Link>
               </label>
             </div>
