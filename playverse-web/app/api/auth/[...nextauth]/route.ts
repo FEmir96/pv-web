@@ -20,6 +20,19 @@ const api = {
   },
 } as const;
 
+const microsoftClientId =
+  process.env.MICROSOFT_CLIENT_ID ?? process.env.AZURE_AD_CLIENT_ID;
+const microsoftClientSecret =
+  process.env.MICROSOFT_CLIENT_SECRET ?? process.env.AZURE_AD_CLIENT_SECRET;
+const microsoftTenantId =
+  process.env.MICROSOFT_TENANT_ID ?? process.env.AZURE_AD_TENANT_ID ?? "common";
+
+if (!microsoftClientId || !microsoftClientSecret) {
+  throw new Error(
+    "Missing Microsoft/Azure AD OAuth credentials. Set MICROSOFT_* or AZURE_AD_* env vars."
+  );
+}
+
 async function getRoleByEmail(email?: string | null) {
   if (!email) return "free";
   try {
@@ -41,17 +54,18 @@ export const authOptions: AuthOptions = {
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+
       allowDangerousEmailAccountLinking: true,
     }),
 
-AzureAd({
-  clientId: process.env.AZURE_AD_CLIENT_ID!,
-  clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-  tenantId: process.env.AZURE_AD_TENANT_ID || "common",
-  authorization: { params: { scope: "openid profile email offline_access" } },
-  checks: ["pkce", "state"],
-  allowDangerousEmailAccountLinking: true,
-}),
+    AzureAd({
+      clientId: microsoftClientId,
+      clientSecret: microsoftClientSecret,
+      tenantId: microsoftTenantId,
+      authorization: { params: { scope: "openid profile email offline_access" } },
+      checks: ["pkce", "state"],
+      allowDangerousEmailAccountLinking: true,
+    }),
 
     Credentials({
       name: "credentials",
@@ -136,4 +150,8 @@ AzureAd({
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
+
+
+
+
 
