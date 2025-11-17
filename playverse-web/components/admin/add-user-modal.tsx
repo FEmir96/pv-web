@@ -67,7 +67,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-slate-800 border-orange-400 text-orange-400 max-w-md">
         <DialogHeader>
-          <DiAnadir usuario</DialogTitle>
+          <DialogTitle className="text-orange-400 text-xl font-bold text-center">Anadir usuario</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
