@@ -22,7 +22,8 @@ export const createUser = mutation({
       return { ok: false, error: "El email ya esta registrado" } as const;
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Uso sincrono para evitar setTimeout interno (Convex no lo permite en mutaciones)
+    const passwordHash = bcrypt.hashSync(password, 10);
     const finalStatus = status ?? "Activo";
     const createdAt = Date.now();
 
