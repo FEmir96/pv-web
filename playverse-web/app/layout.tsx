@@ -13,6 +13,7 @@ import OAuthToast from "@/components/OAuthToast";
 import ConvexProviderClient from "./providers/convex-provider";
 // NextAuth
 import SessionProviderClient from "./providers/auth-provider";
+import { SessionCleaner } from "@/components/SessionCleaner";
 // HouseAds
 import HouseAdProvider from "./providers/HouseAdProvider";
 
@@ -24,7 +25,7 @@ import GameModeManager from "@/components/GameModeManager";
 
 export const metadata: Metadata = {
   title: "PlayVerse - Tu portal al universo de los juegos",
-  description: "Alquila o compra videojuegos. ¡La diversión te espera!",
+  description: "Alquila o compra videojuegos. Â¡La diversiÃ³n te espera!",
   generator: "v0.app",
 };
 
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConvexProviderClient>
           <SessionProviderClient>
             <HouseAdProvider>
+              <SessionCleaner />
               <GameModeManager />
               <Suspense fallback={<div>Loading...</div>}>
                 <Header />
