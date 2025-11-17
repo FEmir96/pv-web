@@ -4,10 +4,21 @@ import Google from "next-auth/providers/google";
 import AzureAd from "next-auth/providers/azure-ad";
 import Credentials from "next-auth/providers/credentials";
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "@convex/_generated/api";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
 const convex = new ConvexHttpClient(convexUrl);
+
+const api = {
+  queries: {
+    getUserByEmail: {
+      getUserByEmail: "queries/getUserByEmail:getUserByEmail",
+    },
+  },
+  auth: {
+    authLogin: "auth:authLogin",
+    oauthUpsert: "auth:oauthUpsert",
+  },
+} as const;
 
 async function getRoleByEmail(email?: string | null) {
   if (!email) return "free";
@@ -33,14 +44,14 @@ export const authOptions: AuthOptions = {
       allowDangerousEmailAccountLinking: true,
     }),
 
-    AzureAd({
-      clientId: process.env.MICROSOFT_CLIENT_ID!,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-      tenantId: process.env.MICROSOFT_TENANT_ID || "common",
-      authorization: { params: { scope: "openid profile email offline_access" } },
-      checks: ["pkce", "state"],
-      allowDangerousEmailAccountLinking: true,
-    }),
+AzureAd({
+  clientId: process.env.AZURE_AD_CLIENT_ID!,
+  clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+  tenantId: process.env.AZURE_AD_TENANT_ID || "common",
+  authorization: { params: { scope: "openid profile email offline_access" } },
+  checks: ["pkce", "state"],
+  allowDangerousEmailAccountLinking: true,
+}),
 
     Credentials({
       name: "credentials",
@@ -125,3 +136,4 @@ export const authOptions: AuthOptions = {
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
+
