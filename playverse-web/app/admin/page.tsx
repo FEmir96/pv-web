@@ -6,6 +6,13 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Search, Plus, Edit, Trash2, Users, Gamepad2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "convex/react";
@@ -43,6 +50,7 @@ export default function AdminPanel() {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminProfile | null>(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<AdminProfile | null>(null);
 
   const games = useQuery(api.queries.admin.listGames.listGames) as AdminGame[] | undefined;
   const profiles = useQuery(api.queries.admin.listProfiles.listProfiles) as AdminProfile[] | undefined;
@@ -173,9 +181,6 @@ export default function AdminPanel() {
       });
       return;
     }
-
-    const confirmed = typeof window === "undefined" ? true : window.confirm("Eliminar este usuario de forma permanente?");
-    if (!confirmed) return;
 
     try {
       const res = await deleteUser({
@@ -407,16 +412,16 @@ export default function AdminPanel() {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-red-400 hover:text-red-300"
-                              onClick={() => handleDeleteUser(u)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-400 hover:text-red-300"
+                        onClick={() => setConfirmDeleteUser(u)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </td>
                       </tr>
                     ))}
                     {(filteredUsers ?? []).length === 0 && (
@@ -446,6 +451,43 @@ export default function AdminPanel() {
         onSave={handleEditUser}
         user={selectedUser}
       />
+
+      <Dialog open={!!confirmDeleteUser} onOpenChange={() => setConfirmDeleteUser(null)}>
+        <DialogContent className="bg-slate-900 border border-slate-700 text-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-orange-400 text-lg font-semibold">
+              Eliminar usuario
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-300">
+            {confirmDeleteUser
+              ? `¿Eliminar permanentemente a ${confirmDeleteUser.email}?`
+              : "¿Eliminar este usuario de forma permanente?"}
+          </p>
+          <DialogFooter className="flex justify-between gap-3 pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-slate-700 text-slate-200 hover:text-slate-50 hover:bg-slate-800"
+              onClick={() => setConfirmDeleteUser(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="bg-orange-400 text-slate-900 hover:bg-orange-500"
+              onClick={() => {
+                if (confirmDeleteUser) {
+                  handleDeleteUser(confirmDeleteUser);
+                }
+                setConfirmDeleteUser(null);
+              }}
+            >
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
