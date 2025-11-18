@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/lib/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import type { Doc, Id } from "@convex/_generated/dataModel";
+import type { Id } from "@convex/_generated/dataModel";
+import type { FunctionReference } from "convex/server";
 import { CoverBox } from "@/components/CoverBox";
 
 /* ────────────────────────────────────────────── */
@@ -81,9 +83,9 @@ type LibraryCardProps = {
 
 function LibraryCard({ id, title, cover, genre, kind, expiresAt }: LibraryCardProps) {
   const gameDoc = useQuery(
-    (api as any).queries.getGameById.getGameById as any,
+    (api as any).queries.getGameById.getGameById as FunctionReference<"query">,
     id ? ({ id } as any) : "skip"
-  ) as (Doc<"games"> | null | undefined);
+  ) as any;
 
   const isPremiumPlan = (gameDoc as any)?.plan === "premium";
   const isRental = kind === "rental";
@@ -219,19 +221,22 @@ export default function MisJuegosPage() {
   };
 
   const { data: session, status } = useSession();
-  const email = useMemo(
-    () => session?.user?.email?.toLowerCase() || null,
-    [session?.user?.email]
-  );
+  const storeUser = useAuthStore((s) => s.user);
+
+  const email = useMemo(() => {
+    const sEmail = session?.user?.email?.toLowerCase() || null;
+    const localEmail = storeUser?.email?.toLowerCase() || null;
+    return sEmail || localEmail;
+  }, [session?.user?.email, storeUser?.email]);
   const isLogged = Boolean(email);
 
   const profile = useQuery(
-    api.queries.getUserByEmail.getUserByEmail as any,
+    (api as any).queries.getUserByEmail.getUserByEmail as any,
     email ? { email } : "skip"
   ) as { _id: Id<"profiles"> } | null | undefined;
 
   const purchases = useQuery(
-    api.queries.getUserPurchases.getUserPurchases as any,
+    (api as any).queries.getUserPurchases.getUserPurchases as any,
     profile?._id ? { userId: profile._id } : "skip"
   ) as PurchaseRow[] | undefined;
 
@@ -241,12 +246,12 @@ export default function MisJuegosPage() {
       : null;
 
   const rentals = useQuery(
-    api.queries.getUserRentals.getUserRentals as any,
+    (api as any).queries.getUserRentals.getUserRentals as any,
     validUserId ? { userId: validUserId as Id<"profiles"> } : "skip"
   ) as RentalRow[] | undefined;
 
   const gamesMini =
-    (useQuery(api.queries.listGamesMinimal.listGamesMinimal as any, {}) as
+    (useQuery((api as any).queries.listGamesMinimal.listGamesMinimal as any, {}) as
       | MinimalGame[]
       | undefined) || [];
 

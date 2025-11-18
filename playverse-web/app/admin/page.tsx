@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/lib/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { Search, Plus, Edit, Trash2, Users, Gamepad2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { FunctionReference } from "convex/server";
 import type { Id } from "@convex/_generated/dataModel";
 import { AddUserModal } from "@/components/admin/add-user-modal";
 import { EditUserModal } from "@/components/admin/edit-user-modal";
@@ -44,6 +46,11 @@ type AdminProfile = {
 export default function AdminPanel() {
   const { toast } = useToast();
   const { data: session } = useSession();
+  const storeUser = useAuthStore((s) => s.user);
+  const adminEmail = useMemo(
+    () => session?.user?.email?.toLowerCase().trim() || storeUser?.email?.toLowerCase().trim() || null,
+    [session?.user?.email, storeUser?.email]
+  );
 
   const [activeTab, setActiveTab] = useState<"games" | "users">("games");
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,15 +59,26 @@ export default function AdminPanel() {
   const [selectedUser, setSelectedUser] = useState<AdminProfile | null>(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<AdminProfile | null>(null);
 
-  const games = useQuery(api.queries.admin.listGames.listGames) as AdminGame[] | undefined;
-  const profiles = useQuery(api.queries.admin.listProfiles.listProfiles) as AdminProfile[] | undefined;
+  const games = useQuery(
+    (api as any).queries.admin.listGames.listGames as FunctionReference<"query">
+  ) as AdminGame[] | undefined;
+  const profiles = useQuery(
+    (api as any).queries.admin.listProfiles.listProfiles as FunctionReference<"query">
+  ) as AdminProfile[] | undefined;
 
-  const deleteGame = useMutation(api.mutations.admin.deleteGame.deleteGame);
-  const updateProfile = useMutation(api.mutations.admin.updateProfile.updateProfile);
-  const createUser = useMutation(api.mutations.createUser.createUser);
-  const deleteUser = useMutation(api.mutations.deleteUser.deleteUser);
+  const deleteGame = useMutation(
+    (api as any).mutations.admin.deleteGame.deleteGame as FunctionReference<"mutation">
+  );
+  const updateProfile = useMutation(
+    (api as any).mutations.admin.updateProfile.updateProfile as FunctionReference<"mutation">
+  );
+  const createUser = useMutation(
+    (api as any).mutations.createUser.createUser as FunctionReference<"mutation">
+  );
+  const deleteUser = useMutation(
+    (api as any).mutations.deleteUser.deleteUser as FunctionReference<"mutation">
+  );
 
-  const adminEmail = session?.user?.email?.toLowerCase().trim() ?? null;
   const adminProfileId = useMemo(() => {
     if (!adminEmail || !profiles) return null;
     const match = profiles.find((p) => (p.email ?? "").toLowerCase() === adminEmail);
