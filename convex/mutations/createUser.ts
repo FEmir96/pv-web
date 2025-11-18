@@ -26,20 +26,28 @@ export const createUser = mutation({
     const passwordHash = bcrypt.hashSync(password, 10);
     const finalStatus = status ?? "Activo";
     const createdAt = Date.now();
-
-    const avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/png?seed=${encodeURIComponent(
-      normalizedEmail
-    )}&radius=50&format=png`;
-
-    const _id = await db.insert("profiles", {
+    const baseProfile: Record<string, unknown> = {
       name,
       email: normalizedEmail,
       role,
       status: finalStatus,
       createdAt,
       passwordHash,
-      avatarUrl,
-    });
+      avatarUrl: `https://api.dicebear.com/8.x/bottts-neutral/png?seed=${encodeURIComponent(
+        normalizedEmail
+      )}&radius=50&format=png`,
+    };
+
+    if (role === "premium") {
+      const now = Date.now();
+      const expires = now + 30 * 24 * 60 * 60 * 1000; // 30 días
+      baseProfile.premiumSince = now;
+      baseProfile.premiumExpiresAt = expires;
+      baseProfile.premiumPlan = "monthly";
+      baseProfile.premiumAutoRenew = false;
+    }
+
+    const _id = await db.insert("profiles", baseProfile as any);
 
     return {
       ok: true,

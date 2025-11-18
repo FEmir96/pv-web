@@ -133,6 +133,11 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
               }`}
               required
             />
+            {showFieldError && (
+              <p className="mt-1 text-sm text-red-400">
+                Las contrasenas no coinciden.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
