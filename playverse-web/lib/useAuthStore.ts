@@ -5,12 +5,13 @@ import { create, StateCreator } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 export type UserProfile = {
-  _id: string;
+  _id?: string;
   name: string;
   email: string;
   role: "free" | "premium" | "admin";
-  createdAt: number;
+  createdAt?: number;
   avatarUrl?: string | null;
+  status?: string;
 };
 
 export type AuthState = {
@@ -34,8 +35,8 @@ const creator: StateCreator<AuthState> = (set, get) => ({
 export const useAuthStore = create<AuthState>()(
   persist(creator, {
     name: "pv_auth",
-    version: 1,
-    storage: createJSONStorage(() => sessionStorage),
+    version: 2,
+    storage: createJSONStorage(() => localStorage),
     partialize: (state) => ({ user: state.user }),
     migrate: (persistedState) => persistedState as AuthState,
   })
