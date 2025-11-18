@@ -13,22 +13,25 @@ export default function ShowLoginToast() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    const q = searchParams?.get("login");
+    const loginParam = searchParams?.get("login");
+    const authParam = searchParams?.get("auth");
+    const provider = searchParams?.get("provider");
     const logout = searchParams?.get("logout");
 
-    // LOGIN OK
-    if (q === "ok") {
+    // LOGIN OK (acepta login=ok o auth=ok)
+    if (loginParam === "ok" || authParam === "ok") {
       const name =
         session?.user?.name ??
         // si la sesión aún está cargando, mostramos algo genérico
         "Gamer";
+      const via = provider ? ` vía ${provider}` : "";
       toast({
         title: `¡Bienvenido, ${name}!`,
-        description: "Inicio de sesión exitoso.",
+        description: `Inicio de sesión exitoso${via}.`,
         duration: 4000,
         // barra naranja (default). No seteamos data-bar aquí.
       } as any);
-      router.replace("/"); // limpiamos ?login=ok
+      router.replace("/"); // limpiamos flags (?login=ok o ?auth=ok)
       return;
     }
 
