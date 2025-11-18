@@ -1,15 +1,14 @@
 // convex/queries/games/getIdByEmbedUrl.ts
 import { query } from "../../_generated/server";
 import { v } from "convex/values";
+import { findGameByEmbedUrl, normalizeEmbedUrl } from "../../lib/embed";
 
 export const getIdByEmbedUrl = query({
   args: { embedUrl: v.string() },
   handler: async (ctx, { embedUrl }) => {
-    const g = await ctx.db
-      .query("games")
-      .filter(q => q.eq(q.field("embed_url"), embedUrl))
-      .first();
+    const g = await findGameByEmbedUrl(ctx.db, embedUrl);
     if (!g) return null;
-    return { id: g._id, title: g.title, embedUrl: g.embed_url };
+    const stored = g.embedUrl ?? embedUrl;
+    return { id: g._id, title: g.title, embedUrl: normalizeEmbedUrl(stored) ?? stored };
   },
 });

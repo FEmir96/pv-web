@@ -1,6 +1,7 @@
 import { mutation } from "../../_generated/server";
 import { v } from "convex/values";
 import type { Id } from "../../_generated/dataModel";
+import { findGameByEmbedUrl } from "../../lib/embed";
 
 export const submitScore = mutation({
   args: {
@@ -10,7 +11,7 @@ export const submitScore = mutation({
     embedUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const email = args.userEmail.toLowerCase();
+    const email = args.userEmail.trim().toLowerCase();
     const user = await ctx.db
       .query("profiles")
       .withIndex("by_email", (q) => q.eq("email", email))
@@ -22,11 +23,7 @@ export const submitScore = mutation({
       const g = await ctx.db.get(args.gameId);
       if (g) game = { _id: g._id, title: g.title };
     } else if (args.embedUrl) {
-      const g = await ctx.db
-        .query("games")
-        .filter((q) => q.eq(q.field("embed_url"), args.embedUrl))
-        .first();
-      if (g) game = { _id: g._id, title: g.title };
+      game = await findGameByEmbedUrl(ctx.db, args.embedUrl);
     }
     if (!game) return { status: "no_game", best: args.score };
 

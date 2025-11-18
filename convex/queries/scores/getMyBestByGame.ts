@@ -1,6 +1,7 @@
 import { query } from "../../_generated/server";
 import { v } from "convex/values";
 import type { Id } from "../../_generated/dataModel";
+import { findGameByEmbedUrl } from "../../lib/embed";
 
 export const getMyBestByGame = query({
   args: {
@@ -9,7 +10,7 @@ export const getMyBestByGame = query({
     gameId: v.optional(v.id("games")),
   },
   handler: async (ctx, args) => {
-    const email = args.userEmail.toLowerCase();
+    const email = args.userEmail.trim().toLowerCase();
     const user = await ctx.db
       .query("profiles")
       .withIndex("by_email", (q) => q.eq("email", email))
@@ -18,12 +19,9 @@ export const getMyBestByGame = query({
 
     let gid: Id<"games"> | undefined = args.gameId as any;
     if (!gid && args.embedUrl) {
-      const g = await ctx.db
-        .query("games")
-        .filter((q) => q.eq(q.field("embed_url"), args.embedUrl))
-        .first();
+      const g = await findGameByEmbedUrl(ctx.db, args.embedUrl);
       if (!g) return null;
-      gid = g._id;
+      gid = g._id as Id<"games">;
     }
     if (!gid) return null;
 
