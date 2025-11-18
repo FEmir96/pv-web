@@ -51,7 +51,8 @@ async function getProfileByEmail(email?: string | null) {
 
 export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt", maxAge: 60 * 60 * 8, updateAge: 0 },
+  // Mantener la sesión más allá del cierre de navegador
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30, updateAge: 60 * 60 * 6 },
   cookies: {
     sessionToken: {
       name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.session-token" : "next-auth.session-token",
@@ -60,7 +61,7 @@ export const authOptions: AuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: undefined, // intentar cookie de sesión (se borra al cerrar navegador)
+        maxAge: 60 * 60 * 24 * 30, // persistimos 30 días
       },
     },
   },
