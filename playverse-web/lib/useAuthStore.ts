@@ -35,8 +35,9 @@ const creator: StateCreator<AuthState> = (set, get) => ({
 export const useAuthStore = create<AuthState>()(
   persist(creator, {
     name: "pv_auth",
-    version: 3,
-    storage: createJSONStorage(() => sessionStorage),
+    // volvemos a persistir en localStorage para mantener sesión entre cierres
+    version: 4,
+    storage: createJSONStorage(() => localStorage),
     partialize: (state) => ({ user: state.user }),
     migrate: (persistedState) => persistedState as AuthState,
   })
