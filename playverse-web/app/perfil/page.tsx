@@ -36,6 +36,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/lib/useAuthStore";
 
+// 🔐 Validación de tarjetas: mismo módulo que usa el checkout
+import {
+  validatePaymentForm,
+  formatExpirationInput,
+  normalizeCardBrandFromNumber,
+  type CardBrand,
+} from "@/lib/validation";
+
 // Convex
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
@@ -83,7 +91,7 @@ const setAutoRenewRef =
 // ——— Tipos UI ———
 type PaymentMethodUI = {
   id: string | number;
-  brand: "visa" | "mastercard" | "amex" | "otro";
+  brand: CardBrand; // usamos el mismo tipo que en el checkout
   last4: string;
   expMonth: number;
   expYear: number;
@@ -119,9 +127,8 @@ function formatCardNumber(v: string) {
   return d.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
 }
 function formatExpLoose(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 4);
-  if (d.length <= 2) return d;
-  return d.slice(0, 2) + "/" + d.slice(2);
+  // reusamos el mismo helper que en el checkout
+  return formatExpirationInput(v);
 }
 
 async function fileToSquareDataUrl(file: File, size = 512): Promise<string> {
@@ -457,10 +464,15 @@ export default function ProfilePage() {
 
   // ——— Modal "Agregar método de pago" ———
   const [payOpen, setPayOpen] = useState(false);
-  const [pmBrand, setPmBrand] = useState<PaymentMethodUI["brand"]>("visa");
+  const [pmBrand, setPmBrand] = useState<CardBrand>("visa");
+  const [pmBrandLocked, setPmBrandLocked] = useState(false);
+  const [pmHolder, setPmHolder] = useState("");
   const [pmNumber, setPmNumber] = useState("");
   const [pmExp, setPmExp] = useState(""); // "MM/YY"
   const [pmCvv, setPmCvv] = useState("");
+  const [pmValidationErrors, setPmValidationErrors] = useState<Record<string, string>>({});
+
+  const maxPmCvvLength = pmBrand === "amex" ? 4 : 3;
 
   const savePaymentMethod = useMutation(savePaymentMethodRef);
 
@@ -474,6 +486,11 @@ export default function ProfilePage() {
   const [pendingDeleteLabel, setPendingDeleteLabel] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [removedIds, setRemovedIds] = useState<Array<string | number>>([]);
+
+  useEffect(() => {
+    // si cambia la marca, recortamos el CVV al largo correcto
+    setPmCvv((prev) => prev.slice(0, pmBrand === "amex" ? 4 : 3));
+  }, [pmBrand]);
 
   function maskCard(num: string) {
     const clean = num.replace(/\D/g, "");
@@ -489,6 +506,31 @@ export default function ProfilePage() {
       return;
     }
 
+    // 🔎 Validación fuerte con el mismo algoritmo del checkout
+    setPmValidationErrors({});
+    const cleanNumber = pmNumber.replace(/\D/g, "");
+
+    const validation = validatePaymentForm({
+      holder: pmHolder,
+      number: cleanNumber,
+      exp: pmExp,
+      cvc: pmCvv,
+    });
+
+    if (!validation.isValid) {
+      const errors: Record<string, string> = {};
+      validation.errors.forEach((err) => {
+        errors[err.field] = err.message;
+      });
+      setPmValidationErrors(errors);
+      toast({
+        title: "Datos de tarjeta inválidos",
+        description: "Por favor corregí los campos marcados en rojo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await savePaymentMethod({
         userId: convexProfile._id,
@@ -498,8 +540,7 @@ export default function ProfilePage() {
         brand: pmBrand,
       });
 
-      const clean = pmNumber.replace(/\D/g, "");
-      const last4 = clean.slice(-4);
+      const last4 = cleanNumber.slice(-4);
       const [mm, yy] = pmExp.split("/");
       const uiItem: PaymentMethodUI = {
         id: Date.now(),
@@ -511,7 +552,13 @@ export default function ProfilePage() {
       setLocalMethods((arr) => [uiItem, ...arr]);
 
       setPayOpen(false);
-      setPmBrand("visa"); setPmNumber(""); setPmExp(""); setPmCvv("");
+      setPmBrand("visa");
+      setPmBrandLocked(false);
+      setPmHolder("");
+      setPmNumber("");
+      setPmExp("");
+      setPmCvv("");
+      setPmValidationErrors({});
 
       toast({
         title: "Método agregado",
@@ -541,14 +588,14 @@ export default function ProfilePage() {
   const roleIcon =
     role === "admin" ? <ShieldAlert className="w-3 h-3 mr-1" /> : <Crown className="w-3 h-3 mr-1" />;
   const roleLabel = role === "admin" ? "Admin" : role === "premium" ? "Premium" : "Free";
-const premiumPlan = (convexProfile as any)?.premiumPlan;
-const isLifetimePlan = premiumPlan === "lifetime";
-const premiumAutoRenew = isLifetimePlan ? false : (convexProfile as any)?.premiumAutoRenew !== false;
-const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
-const premiumExpiresLabel =
-  role === "premium" && premiumExpiresAt && !isLifetimePlan
-    ? new Date(premiumExpiresAt).toLocaleDateString()
-    : null;
+  const premiumPlan = (convexProfile as any)?.premiumPlan;
+  const isLifetimePlan = premiumPlan === "lifetime";
+  const premiumAutoRenew = isLifetimePlan ? false : (convexProfile as any)?.premiumAutoRenew !== false;
+  const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
+  const premiumExpiresLabel =
+    role === "premium" && premiumExpiresAt && !isLifetimePlan
+      ? new Date(premiumExpiresAt).toLocaleDateString()
+      : null;
   const trialEndsAt = typeof (convexProfile as any)?.trialEndsAt === "number" ? (convexProfile as any).trialEndsAt : null;
   const trialActive = Boolean(trialEndsAt && trialEndsAt > Date.now());
   const trialEndLabel = trialActive ? new Date(trialEndsAt as number).toLocaleDateString() : null;
@@ -675,6 +722,8 @@ const premiumExpiresLabel =
         };
         const message =
           errorMap[result?.error as keyof typeof errorMap] ??
+
+
           "No se pudo cambiar la contraseña.";
         toast({ title: "No se pudo cambiar", description: message, variant: "destructive" });
         return;
@@ -1493,7 +1542,11 @@ const premiumExpiresLabel =
       {/* === MODAL: Agregar método de pago === */}
       {payOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setPayOpen(false)}>
-          <form onClick={(e) => e.stopPropagation()} onSubmit={handlePaymentSubmit} className="bg-slate-900 border border-slate-700 rounded-xl p-5 w/full max-w-lg">
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handlePaymentSubmit}
+            className="bg-slate-900 border border-slate-700 rounded-xl p-5 w-full max-w-lg"
+          >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-orange-400 font-semibold">Agregar método de pago</h3>
               <Button type="button" variant="ghost" size="icon" className="text-slate-300" onClick={() => setPayOpen(false)}>
@@ -1506,7 +1559,10 @@ const premiumExpiresLabel =
                 <Label className="text-slate-300 mb-1.5">Marca</Label>
                 <select
                   value={pmBrand}
-                  onChange={(e) => setPmBrand(e.target.value as PaymentMethodUI["brand"])}
+                  onChange={(e) => {
+                    setPmBrand(e.target.value as CardBrand);
+                    setPmBrandLocked(true);
+                  }}
                   className="mt-1 w-full rounded-md bg-slate-700 border border-slate-600 text-white px-2 py-2"
                 >
                   <option value="visa">Visa</option>
@@ -1517,16 +1573,57 @@ const premiumExpiresLabel =
               </div>
 
               <div>
+                <Label className="text-slate-300 mb-2">Nombre del titular</Label>
+                <Input
+                  value={pmHolder}
+                  onChange={(e) => {
+                    setPmHolder(e.target.value);
+                    if (pmValidationErrors.holder) {
+                      const { holder, ...rest } = pmValidationErrors;
+                      setPmValidationErrors(rest);
+                    }
+                  }}
+                  placeholder="Nombre en la tarjeta"
+                  className={`bg-slate-700 text-white mt-1 ${pmValidationErrors.holder ? "border-red-400" : "border-slate-600"
+                    }`}
+                />
+                {pmValidationErrors.holder && (
+                  <p className="text-xs text-red-400 mt-1">{pmValidationErrors.holder}</p>
+                )}
+              </div>
+
+              <div>
                 <Label className="text-slate-300 mb-2">Número de tarjeta</Label>
                 <Input
                   value={pmNumber}
-                  onChange={(e) => setPmNumber(formatCardNumber(e.target.value))}
+                  onChange={(e) => {
+                    const formatted = formatCardNumber(e.target.value);
+                    setPmNumber(formatted);
+
+                    const digits = formatted.replace(/\D/g, "");
+                    if (digits.length === 0) {
+                      setPmBrand("visa");
+                      setPmBrandLocked(false);
+                    } else if (!pmBrandLocked) {
+                      const detected = normalizeCardBrandFromNumber(digits);
+                      if (detected !== pmBrand) setPmBrand(detected);
+                    }
+
+                    if (pmValidationErrors.number) {
+                      const { number, ...rest } = pmValidationErrors;
+                      setPmValidationErrors(rest);
+                    }
+                  }}
                   placeholder="4111 1111 1111 1111"
-                  className="bg-slate-700 border-slate-600 text-white mt-1"
+                  className={`bg-slate-700 border mt-1 text-white ${pmValidationErrors.number ? "border-red-400" : "border-slate-600"
+                    }`}
                   inputMode="numeric"
                   autoComplete="cc-number"
                   required
                 />
+                {pmValidationErrors.number && (
+                  <p className="text-xs text-red-400 mt-1">{pmValidationErrors.number}</p>
+                )}
                 <p className="text-xs text-slate-400 mt-1">Se guarda un hash, no almacenamos el número completo.</p>
               </div>
 
@@ -1535,25 +1632,45 @@ const premiumExpiresLabel =
                   <Label className="text-slate-300 mb-2">Vencimiento (MM/YY)</Label>
                   <Input
                     value={pmExp}
-                    onChange={(e) => setPmExp(formatExpLoose(e.target.value))}
+                    onChange={(e) => {
+                      setPmExp(formatExpLoose(e.target.value));
+                      if (pmValidationErrors.exp) {
+                        const { exp, ...rest } = pmValidationErrors;
+                        setPmValidationErrors(rest);
+                      }
+                    }}
                     placeholder="12/26"
-                    className="bg-slate-700 border-slate-600 text-white mt-1"
+                    className={`bg-slate-700 border mt-1 text-white ${pmValidationErrors.exp ? "border-red-400" : "border-slate-600"
+                      }`}
                     inputMode="numeric"
                     autoComplete="cc-exp"
                     required
                   />
+                  {pmValidationErrors.exp && (
+                    <p className="text-xs text-red-400 mt-1">{pmValidationErrors.exp}</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-slate-300 mb-2">CVV</Label>
                   <Input
                     value={pmCvv}
-                    onChange={(e) => setPmCvv(e.target.value.replace(/\D/g, "").slice(0, 3))}
-                    placeholder="123"
-                    className="bg-slate-700 border-slate-600 text-white mt-1"
+                    onChange={(e) => {
+                      setPmCvv(e.target.value.replace(/\D/g, "").slice(0, maxPmCvvLength));
+                      if (pmValidationErrors.cvc) {
+                        const { cvc, ...rest } = pmValidationErrors;
+                        setPmValidationErrors(rest);
+                      }
+                    }}
+                    placeholder={pmBrand === "amex" ? "1234" : "123"}
+                    className={`bg-slate-700 border mt-1 text-white ${pmValidationErrors.cvc ? "border-red-400" : "border-slate-600"
+                      }`}
                     inputMode="numeric"
                     autoComplete="cc-csc"
                     required
                   />
+                  {pmValidationErrors.cvc && (
+                    <p className="text-xs text-red-400 mt-1">{pmValidationErrors.cvc}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1580,4 +1697,3 @@ const premiumExpiresLabel =
     </div>
   );
 }
-
