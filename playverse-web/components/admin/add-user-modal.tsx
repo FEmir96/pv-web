@@ -31,6 +31,10 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
     status: "Activo" as "Activo" | "Baneado",
   });
   const { toast } = useToast();
+  const passwordsMismatch =
+    formData.password.length > 0 &&
+    formData.confirmPassword.length > 0 &&
+    formData.password !== formData.confirmPassword;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +112,9 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
               placeholder="********"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="bg-slate-900 border-slate-700 text-orange-400 placeholder:text-slate-500"
+              className={`bg-slate-900 border-slate-700 text-orange-400 placeholder:text-slate-500 ${
+                passwordsMismatch ? "border-red-500 focus:border-red-500" : ""
+              }`}
               required
             />
           </div>
@@ -120,7 +126,9 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
               placeholder="********"
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              className="bg-slate-900 border-slate-700 text-orange-400 placeholder:text-slate-500"
+              className={`bg-slate-900 border-slate-700 text-orange-400 placeholder:text-slate-500 ${
+                passwordsMismatch ? "border-red-500 focus:border-red-500" : ""
+              }`}
               required
             />
           </div>
