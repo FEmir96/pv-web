@@ -541,24 +541,14 @@ export default function ProfilePage() {
   const roleIcon =
     role === "admin" ? <ShieldAlert className="w-3 h-3 mr-1" /> : <Crown className="w-3 h-3 mr-1" />;
   const roleLabel = role === "admin" ? "Admin" : role === "premium" ? "Premium" : "Free";
-  const premiumPlan = (convexProfile as any)?.premiumPlan;
-  const isLifetimePlan = premiumPlan === "lifetime";
-  const premiumAutoRenew = isLifetimePlan ? false : (convexProfile as any)?.premiumAutoRenew !== false;
-  const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
-  const premiumExpiresLabel =
-    role === "premium" && premiumExpiresAt && !isLifetimePlan
-      ? new Date(premiumExpiresAt).toLocaleDateString()
-      : null;
-  const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
-  const premiumExpiresLabel =
-    role === "premium" && premiumExpiresAt && !isLifetimePlan
-      ? new Date(premiumExpiresAt).toLocaleDateString()
-      : null;
-  const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
-  const premiumExpiresLabel =
-    role === "premium" && premiumExpiresAt && !isLifetimePlan
-      ? new Date(premiumExpiresAt).toLocaleDateString()
-      : null;
+const premiumPlan = (convexProfile as any)?.premiumPlan;
+const isLifetimePlan = premiumPlan === "lifetime";
+const premiumAutoRenew = isLifetimePlan ? false : (convexProfile as any)?.premiumAutoRenew !== false;
+const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
+const premiumExpiresLabel =
+  role === "premium" && premiumExpiresAt && !isLifetimePlan
+    ? new Date(premiumExpiresAt).toLocaleDateString()
+    : null;
   const trialEndsAt = typeof (convexProfile as any)?.trialEndsAt === "number" ? (convexProfile as any).trialEndsAt : null;
   const trialActive = Boolean(trialEndsAt && trialEndsAt > Date.now());
   const trialEndLabel = trialActive ? new Date(trialEndsAt as number).toLocaleDateString() : null;
@@ -1590,3 +1580,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
