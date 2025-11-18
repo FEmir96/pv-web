@@ -101,7 +101,7 @@ const num = (v: unknown): number | undefined => {
 
 type BestPriceHit = { path: string; val: number };
 
-/** ðŸ”Ž Fallback profundo: encuentra precio de COMPRA en cualquier parte del objeto (evita alquiler/semana) */
+/** Fallback profundo: encuentra precio de COMPRA en cualquier parte del objeto (evita alquiler/semana) */
 function deepFindBuyPrice(game: any): number | undefined {
   if (!game || typeof game !== "object") return undefined;
 
@@ -152,7 +152,7 @@ function deepFindBuyPrice(game: any): number | undefined {
     const hit = best as BestPriceHit | null;
     if (hit) {
       // eslint-disable-next-line no-console
-      console.info("ðŸ”Ž pickBuyPrice fallback:", hit.path, "=>", hit.val);
+      console.info("pickBuyPrice fallback:", hit.path, "=>", hit.val);
     }
   }
 
@@ -631,7 +631,7 @@ export default function GameDetailPage() {
       if (isEmbeddable) {
         router.push(playUrl);
       } else {
-        toast({ title: "Lanzando juego…", description: "¡Feliz gaming! ??" });
+        toast({ title: "Lanzando juego", description: "Feliz gaming!" });
       }
       return;
     }
@@ -643,7 +643,7 @@ export default function GameDetailPage() {
         if (isEmbeddable) {
           router.push(playUrl);
         } else {
-          toast({ title: "Lanzando juego…", description: "¡Feliz gaming! ??" });
+          toast({ title: "Lanzando juego", description: "Feliz gaming!" });
         }
         return;
       }
@@ -657,7 +657,7 @@ export default function GameDetailPage() {
         router.push(playUrl);
       } else {
         // Non-embeddable: keep current UX of showing a launching toast
-        toast({ title: "Lanzando juego…", description: "¡Feliz gaming! ??" });
+        toast({ title: "Lanzando juego", description: "Feliz gaming!" });
       }
       return;
     }
@@ -665,12 +665,11 @@ export default function GameDetailPage() {
     // Fallback: user is logged but not allowed to play
     toast({
       title: "No disponible",
-      description: "Necesitás comprar o alquilar el juego para jugar.",
+      description: "Necesitas comprar o alquilar el juego para jugar.",
       variant: "destructive",
     });
   };
-
-  const onToggleFavorite = async () => {
+const onToggleFavorite = async () => {
     if (!game?._id) return;
     if (!isLogged || !profile?._id) {
       setShowAuthFav(true);
@@ -784,7 +783,7 @@ export default function GameDetailPage() {
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="container mx-auto px-4 py-8">
         {!hasId && <div className="p-6 text-slate-300">Juego no encontrado.</div>}
-        {hasId && isLoading && <div className="p-6 text-slate-300">Cargandoâ€¦</div>}
+        {hasId && isLoading && <div className="p-6 text-slate-300">Cargandoâ¬¦</div>}
         {hasId && notFound && <div className="p-6 text-slate-300">Juego no encontrado.</div>}
 
         {hasId && game && (
