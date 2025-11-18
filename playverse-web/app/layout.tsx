@@ -28,9 +28,9 @@ export const metadata: Metadata = {
   description: "Alquila o compra videojuegos. La diversión te espera!",
   generator: "v0.app",
   icons: {
-    icon: "/favicon-64.png",
-    shortcut: "/favicon-64.png",
-    apple: "/favicon-64.png",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
 };
 
