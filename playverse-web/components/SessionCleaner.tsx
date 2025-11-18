@@ -1,27 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useAuthStore } from "@/lib/useAuthStore";
-import { setFavoritesScope } from "./favoritesStore";
+import { useSession, signOut } from "next-auth/react";
 
-// Sincroniza el store local con la sesión de NextAuth y evita que se cierre solo.
+const STORAGE_KEY = "pv_auth";
+
+// Si la sesión de NextAuth está pero el storage se limpió (otra pestaña o cierre),
+// vuelve a limpiar para evitar estados inconsistentes.
 export function SessionCleaner() {
-  const { data: session, status } = useSession();
-  const setUser = useAuthStore((s) => s.setUser);
+  const { status } = useSession();
 
   useEffect(() => {
-    if (status !== "authenticated" || !session?.user) return;
-    const u = session.user as any;
-    setUser({
-      _id: u.id || u.sub,
-      name: u.name || "",
-      email: u.email || "",
-      role: u.role || "free",
-      status: u.status || "Activo",
-    });
-    setFavoritesScope(u.email || null);
-  }, [status, session?.user, setUser]);
+    if (typeof window === "undefined") return;
+    if (status !== "authenticated") return;
+
+    const hasSessionStorage = sessionStorage.getItem(STORAGE_KEY);
+    if (!hasSessionStorage) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      signOut({ redirect: false }).catch(() => {});
+    }
+  }, [status]);
 
   return null;
 }
