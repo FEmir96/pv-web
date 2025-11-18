@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -29,12 +30,18 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
     role: "free" as "free" | "premium" | "admin",
     status: "Activo" as "Activo" | "Baneado",
   });
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Las contrasenas no coinciden");
+      toast({
+        title: "Las contrasenas no coinciden",
+        description: "Revisa las contrasenas e intentalo de nuevo.",
+        variant: "destructive",
+        duration: 4000,
+      });
       return;
     }
 

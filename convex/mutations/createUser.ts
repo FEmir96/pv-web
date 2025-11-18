@@ -27,6 +27,10 @@ export const createUser = mutation({
     const finalStatus = status ?? "Activo";
     const createdAt = Date.now();
 
+    const avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/png?seed=${encodeURIComponent(
+      normalizedEmail
+    )}&radius=50&format=png`;
+
     const _id = await db.insert("profiles", {
       name,
       email: normalizedEmail,
@@ -34,6 +38,7 @@ export const createUser = mutation({
       status: finalStatus,
       createdAt,
       passwordHash,
+      avatarUrl,
     });
 
     return {

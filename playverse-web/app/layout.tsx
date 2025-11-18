@@ -25,8 +25,13 @@ import GameModeManager from "@/components/GameModeManager";
 
 export const metadata: Metadata = {
   title: "PlayVerse - Tu portal al universo de los juegos",
-  description: "Alquila o compra videojuegos. Â¡La diversiÃ³n te espera!",
+  description: "Alquila o compra videojuegos. La diversión te espera!",
   generator: "v0.app",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
