@@ -544,6 +544,21 @@ export default function ProfilePage() {
   const premiumPlan = (convexProfile as any)?.premiumPlan;
   const isLifetimePlan = premiumPlan === "lifetime";
   const premiumAutoRenew = isLifetimePlan ? false : (convexProfile as any)?.premiumAutoRenew !== false;
+  const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
+  const premiumExpiresLabel =
+    role === "premium" && premiumExpiresAt && !isLifetimePlan
+      ? new Date(premiumExpiresAt).toLocaleDateString()
+      : null;
+  const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
+  const premiumExpiresLabel =
+    role === "premium" && premiumExpiresAt && !isLifetimePlan
+      ? new Date(premiumExpiresAt).toLocaleDateString()
+      : null;
+  const premiumExpiresAt = (convexProfile as any)?.premiumExpiresAt as number | undefined;
+  const premiumExpiresLabel =
+    role === "premium" && premiumExpiresAt && !isLifetimePlan
+      ? new Date(premiumExpiresAt).toLocaleDateString()
+      : null;
   const trialEndsAt = typeof (convexProfile as any)?.trialEndsAt === "number" ? (convexProfile as any).trialEndsAt : null;
   const trialActive = Boolean(trialEndsAt && trialEndsAt > Date.now());
   const trialEndLabel = trialActive ? new Date(trialEndsAt as number).toLocaleDateString() : null;
@@ -779,9 +794,9 @@ export default function ProfilePage() {
                   {roleIcon}
                   {roleLabel}
                 </span>
-                {role === "premium" && (convexProfile as any)?.premiumExpiresAt && (convexProfile as any)?.premiumPlan !== "lifetime" ? (
+                {premiumExpiresLabel ? (
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-slate-700 text-slate-200">
-                    Vence el {new Date((convexProfile as any).premiumExpiresAt).toLocaleDateString()}
+                    Vence el {premiumExpiresLabel}
                   </span>
                 ) : null}
               </div>
@@ -876,10 +891,8 @@ export default function ProfilePage() {
                         <p className="text-slate-400 text-sm">
                           Renovacion automatica {isLifetimePlan ? "no aplica (lifetime)" : premiumAutoRenew ? "activa" : "desactivada"}
                         </p>
-                        {(convexProfile as any)?.premiumExpiresAt && (convexProfile as any)?.premiumPlan !== "lifetime" ? (
-                          <p className="text-slate-400 text-xs mt-1">
-                            Vence el {new Date((convexProfile as any).premiumExpiresAt).toLocaleDateString()}
-                          </p>
+                        {premiumExpiresLabel ? (
+                          <p className="text-slate-400 text-xs mt-1">Vence el {premiumExpiresLabel}</p>
                         ) : null}
                         {trialActive && trialEndLabel && (
                           <div className="mt-3 mb-2 rounded-lg border border-amber-400/30 bg-amber-500/10 text-amber-100 text-sm p-3">
@@ -1043,7 +1056,7 @@ export default function ProfilePage() {
                       size="sm"
                       onClick={() => setPurchasesPage((prev) => Math.max(prev - 1, 0))}
                       disabled={clampedPurchasesPage === 0}
-                      className="text-slate-300 hover:text-white"
+                      className="text-slate-300 hover:text-orange-400"
                     >
                       Anterior
                     </Button>
@@ -1059,7 +1072,7 @@ export default function ProfilePage() {
                         )
                       }
                       disabled={clampedPurchasesPage >= totalPurchasePages - 1}
-                      className="text-slate-300 hover:text-white"
+                      className="text-slate-300 hover:text-orange-400"
                     >
                       Siguiente
                     </Button>
