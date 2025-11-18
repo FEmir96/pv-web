@@ -626,14 +626,24 @@ export default function GameDetailPage() {
       return;
     }
 
-    // If the game requires premium subscription, gate access to premium users (or admins)
+    // Admin bypass: siempre puede jugar cualquier juego
+    if (isAdmin) {
+      if (isEmbeddable) {
+        router.push(playUrl);
+      } else {
+        toast({ title: "Lanzando juego…", description: "¡Feliz gaming! ??" });
+      }
+      return;
+    }
+
+    // If the game requires premium subscription, gate access to premium users
     if (isPremiumPlan) {
-      if (isAdmin || isPremiumSub || hasPurchased || hasActiveRental) {
+      if (isPremiumSub || hasPurchased || hasActiveRental) {
         // Allowed to play
         if (isEmbeddable) {
           router.push(playUrl);
         } else {
-          toast({ title: "Lanzando juegoâ€¦", description: "Â¡Feliz gaming! ðŸŽ®" });
+          toast({ title: "Lanzando juego…", description: "¡Feliz gaming! ??" });
         }
         return;
       }
@@ -647,7 +657,7 @@ export default function GameDetailPage() {
         router.push(playUrl);
       } else {
         // Non-embeddable: keep current UX of showing a launching toast
-        toast({ title: "Lanzando juegoâ€¦", description: "Â¡Feliz gaming! ðŸŽ®" });
+        toast({ title: "Lanzando juego…", description: "¡Feliz gaming! ??" });
       }
       return;
     }
@@ -655,7 +665,7 @@ export default function GameDetailPage() {
     // Fallback: user is logged but not allowed to play
     toast({
       title: "No disponible",
-      description: "NecesitÃ¡s comprar o alquilar el juego para jugar.",
+      description: "Necesitás comprar o alquilar el juego para jugar.",
       variant: "destructive",
     });
   };
@@ -1364,3 +1374,6 @@ export default function GameDetailPage() {
     </div>
   );
 }
+
+
+
