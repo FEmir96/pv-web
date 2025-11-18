@@ -35,6 +35,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
     formData.password.length > 0 &&
     formData.confirmPassword.length > 0 &&
     formData.password !== formData.confirmPassword;
+  const showFieldError = passwordsMismatch;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +46,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
         description: "Revisa las contrasenas e intentalo de nuevo.",
         variant: "destructive",
         duration: 4000,
+        "data-bar": "#ef4444",
       });
       return;
     }
@@ -113,7 +115,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className={`bg-slate-900 border-slate-700 text-orange-400 placeholder:text-slate-500 ${
-                passwordsMismatch ? "border-red-500 focus:border-red-500" : ""
+                showFieldError ? "border-red-500 focus:border-red-500" : ""
               }`}
               required
             />
@@ -127,7 +129,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               className={`bg-slate-900 border-slate-700 text-orange-400 placeholder:text-slate-500 ${
-                passwordsMismatch ? "border-red-500 focus:border-red-500" : ""
+                showFieldError ? "border-red-500 focus:border-red-500" : ""
               }`}
               required
             />
