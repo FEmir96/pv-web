@@ -27,7 +27,7 @@ const topByGameRef = (
 ).topByGame;
 
 const getIdByEmbedUrlRef = (
-  (api as any)["queries/getIdByEmbedUrl"] as { getIdByEmbedUrl: FunctionReference<"query"> }
+  (api as any)["queries/games/getIdByEmbedUrl"] as { getIdByEmbedUrl: FunctionReference<"query"> }
 ).getIdByEmbedUrl;
 
 // ======================================================
