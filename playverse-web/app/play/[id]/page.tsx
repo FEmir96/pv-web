@@ -4,29 +4,44 @@ import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
-import { api } from "@convex";
+
+import { api } from "@convex/_generated/api";
+import type { FunctionReference } from "convex/server";
+
 import type { Id } from "@convex/_generated/dataModel";
 import RankingButton from "@/components/RankingButton";
 import { Button } from "@/components/ui/button";
 
-// Convex refs
-const getGameByIdRef = (api as any)["queries/getGameById"].getGameById;
-const getUserByEmailRef = (api as any)["queries/getUserByEmail"].getUserByEmail;
-const canPlayGameRef = (api as any)["queries/canPlayGame"].canPlayGame;
+const convexApi = api as any;
+const getGameByIdRef =
+  (convexApi?.queries?.getGameById ??
+    convexApi?.getGameById) as FunctionReference<"query">;
+const getUserByEmailRef =
+  (convexApi?.queries?.getUserByEmail ??
+    convexApi?.getUserByEmail) as FunctionReference<"query">;
+const canPlayGameRef =
+  (
+    convexApi?.queries?.games?.canPlayGame ??
+    convexApi?.games?.canPlayGame ??
+    convexApi?.["games/canPlayGame"]
+  ) as FunctionReference<"query">;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
   const params = useParams();
 
+  // Game Id de la URL
   const gameId = useMemo(() => {
     const raw = params?.id as string | string[] | undefined;
-    return Array.isArray(raw) ? raw[0] : raw ?? null;
+    return Array.isArray(raw) ? raw[0] : raw;
   }, [params]);
 
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // Queries
+  // -------------------------------------------------------
+  // Queries correctas sin condicionales rotos
+  // -------------------------------------------------------
   const game = useQuery(
     getGameByIdRef,
     gameId ? { id: gameId as Id<"games"> } : "skip"
@@ -44,7 +59,9 @@ export default function PlayEmbeddedPage() {
       : "skip"
   );
 
-  // Pantalla universal de carga
+  // -------------------------------------------------------
+  // Loading
+  // -------------------------------------------------------
   if (!game || (email && !profile) || (email && !canPlay)) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-200">
@@ -56,6 +73,9 @@ export default function PlayEmbeddedPage() {
   const title = game?.title ?? "Juego";
   const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
 
+  // -------------------------------------------------------
+  // No logueado
+  // -------------------------------------------------------
   if (!email) {
     return (
       <Blocked
@@ -67,6 +87,9 @@ export default function PlayEmbeddedPage() {
     );
   }
 
+  // -------------------------------------------------------
+  // Juego inexistente
+  // -------------------------------------------------------
   if (!game) {
     return (
       <Blocked
@@ -78,6 +101,9 @@ export default function PlayEmbeddedPage() {
     );
   }
 
+  // -------------------------------------------------------
+  // Juego no embebible
+  // -------------------------------------------------------
   if (!embedUrl) {
     return (
       <Blocked
@@ -89,6 +115,9 @@ export default function PlayEmbeddedPage() {
     );
   }
 
+  // -------------------------------------------------------
+  // VALIDACIÓN DE ACCESO
+  // -------------------------------------------------------
   if (!canPlay.canPlay) {
     let msg = "No tenés acceso a este juego.";
     let btn = "Volver";
@@ -122,7 +151,9 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Usuario habilitado a jugar
+  // -------------------------------------------------------
+  // SI LLEGA ACÁ → PUEDE JUGAR
+  // -------------------------------------------------------
   const qs =
     embedUrl.includes("?")
       ? "&" + new URLSearchParams({ email, gid: gameId! }).toString()
@@ -153,7 +184,7 @@ export default function PlayEmbeddedPage() {
             src={finalSrc}
             className="w-full h-full"
             title={title}
-            allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write"
+            allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write;"
             referrerPolicy="no-referrer"
             allowFullScreen
           />
@@ -167,6 +198,9 @@ export default function PlayEmbeddedPage() {
   );
 }
 
+// -------------------------------------------------------
+// COMPONENTE BLOQUEADO
+// -------------------------------------------------------
 function Blocked({
   title,
   text,
