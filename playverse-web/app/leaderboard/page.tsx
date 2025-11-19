@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import { api } from "@convex/_generated/api";
@@ -31,29 +30,12 @@ const getIdByEmbedUrlRef = (
   (api as any)["queries/games/getIdByEmbedUrl"] as { getIdByEmbedUrl: FunctionReference<"query"> }
 ).getIdByEmbedUrl;
 
-const getUserByEmailRef =
-  (api as any)["queries/getUserByEmail"].getUserByEmail as FunctionReference<"query">;
-
-const ownsGameRef =
-  (api as any)["queries/ownsGame"].ownsGame as FunctionReference<"query">;
-
 // ======================================================
 //                COMPONENTE PRINCIPAL
 // ======================================================
 export default function LeaderboardPage() {
   const params = useSearchParams();
   const router = useRouter();
-  const { data: session } = useSession();
-
-  const email = session?.user?.email?.toLowerCase() ?? null;
-
-  // Perfil Convex
-  const profile = useQuery(
-    getUserByEmailRef as any,
-    email ? { email } : "skip"
-  ) as { _id: string; role?: "free" | "premium" | "admin" } | null | undefined;
-
-  const userId = profile?._id ?? null;
 
   // Juego seleccionado
   const gameParam = (params.get("game") || "") as GameKey;
@@ -154,27 +136,9 @@ export default function LeaderboardPage() {
 
   const playHrefSelected = selectedInfo?.id ? `/play/${selectedInfo.id}` : undefined;
 
-  // ======================================================
-  //       VALIDAR SI POSEE EL JUEGO
-  // ======================================================
-  const owns =
-    useQuery(
-      ownsGameRef as any,
-      userId && selectedInfo?.id
-        ? { userId, gameId: selectedInfo.id }
-        : "skip"
-    ) as { owns: boolean } | null | undefined;
-
-  const disabled =
-    !playHrefSelected ||
-    !userId ||
-    owns === undefined ||
-    owns === null ||
-    owns.owns === false;
-
-  // ======================================================
-  // UI
-  // ======================================================
+// ======================================================
+// UI
+// ======================================================
 
   const Tab = ({ k, children }: { k: GameKey; children: React.ReactNode }) => {
     const active = selected === k;
@@ -204,20 +168,8 @@ export default function LeaderboardPage() {
 
           {playHrefSelected ? (
             <Link
-              href={disabled ? "#" : playHrefSelected}
-              className={`inline-flex items-center rounded-full font-semibold px-4 py-2 shadow ring-1 transition
-                ${
-                  disabled
-                    ? "bg-slate-700 text-slate-400 ring-slate-600 cursor-not-allowed"
-                    : "bg-amber-400 hover:bg-amber-300 text-slate-900 ring-amber-300/40"
-                }
-              `}
-              onClick={(e) => {
-                if (disabled) {
-                  e.preventDefault();
-                  alert("No tenés acceso a este juego. Compralo o alquilalo primero.");
-                }
-              }}
+              href={playHrefSelected}
+              className="inline-flex items-center rounded-full bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold px-4 py-2 shadow ring-1 ring-amber-300/40 transition"
             >
               Jugar {meta.title}
             </Link>
