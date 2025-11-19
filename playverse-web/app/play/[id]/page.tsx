@@ -46,7 +46,7 @@ export default function PlayEmbeddedPage() {
     localUser?.email?.toLowerCase() ||
     null;
 
-  // Datos del usuario
+  // Perfil Convex
   const profile = useQuery(
     getUserByEmailRef,
     email ? { email } : "skip"
@@ -64,24 +64,23 @@ export default function PlayEmbeddedPage() {
       : "skip"
   ) as { canPlay: boolean; reason: string | null; expiresAt: number | null } | undefined;
 
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  // Estados de carga
-  if (!email || profile === undefined || game === undefined || canPlay === undefined) {
+  // Carga dura
+  if (
+    profile === undefined ||
+    game === undefined ||
+    canPlay === undefined
+  ) {
     return (
-      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+      <div className="min-h-screen bg-slate-900 text-slate-300 grid place-items-center">
         Cargando…
       </div>
     );
   }
 
+  // Si no existe juego
   if (!game) {
     return (
-      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+      <div className="min-h-screen bg-slate-900 text-slate-300 grid place-items-center">
         Juego no encontrado.
       </div>
     );
@@ -94,11 +93,102 @@ export default function PlayEmbeddedPage() {
 
   if (!embedUrl) {
     return (
-      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+      <div className="min-h-screen bg-slate-900 text-slate-300 grid place-items-center">
         Este juego no tiene versión embebible.
       </div>
     );
   }
+
+  // === GUARD UI ===
+  const blocked = !canPlay.canPlay;
+
+  let guardMsg = "";
+  let guardCTA = null;
+
+  if (blocked) {
+    switch (canPlay.reason) {
+      case "login":
+        guardMsg = "Debes iniciar sesión para jugar este título.";
+        guardCTA = (
+          <Button
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+            onClick={() =>
+              router.push(`/auth/login?next=/play/${gameId}`)
+            }
+          >
+            Iniciar sesión
+          </Button>
+        );
+        break;
+
+      case "premium_required":
+        guardMsg = "Este juego requiere una suscripción Premium.";
+        guardCTA = (
+          <Button
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+            onClick={() => router.push("/premium")}
+          >
+            Hacerse Premium
+          </Button>
+        );
+        break;
+
+      case "purchase_required":
+        guardMsg = "Debes comprar este juego para poder jugarlo.";
+        guardCTA = (
+          <Button
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+            onClick={() => router.push(`/checkout/compra/${gameId}`)}
+          >
+            Comprar juego
+          </Button>
+        );
+        break;
+
+      case "rental_required":
+        guardMsg = "Tu alquiler está vencido o no tienes alquiler activo.";
+        guardCTA = (
+          <Button
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+            onClick={() => router.push(`/checkout/alquiler/${gameId}`)}
+          >
+            Alquilar juego
+          </Button>
+        );
+        break;
+
+      default:
+        guardMsg = "No tienes acceso a este juego.";
+        guardCTA = (
+          <Button
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+            onClick={() => router.push(`/juego/${gameId}`)}
+          >
+            Volver
+          </Button>
+        );
+    }
+  }
+
+  // === Mostrar GUARD en lugar del iframe ===
+  if (blocked) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white grid place-items-center px-4">
+        <div className="px-6 py-5 bg-slate-800/70 border border-slate-700 rounded-xl max-w-md text-center space-y-4">
+          <h1 className="text-xl font-bold text-orange-400">{title}</h1>
+          <p className="text-slate-300">{guardMsg}</p>
+          {guardCTA}
+        </div>
+      </div>
+    );
+  }
+
+  // === Render del iframe cuando está permitido ===
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const expiresInMs =
     canPlay?.expiresAt != null ? Math.max(0, canPlay.expiresAt - now) : null;
@@ -108,11 +198,9 @@ export default function PlayEmbeddedPage() {
   if (gameId) qp.gid = gameId;
 
   const qs =
-    Object.keys(qp).length
-      ? (embedUrl.includes("?") ? "&" : "?") + new URLSearchParams(qp).toString()
-      : "";
-
+    embedUrl.includes("?") ? "&" : "?" + new URLSearchParams(qp).toString();
   const finalSrc = embedUrl + qs;
+
   const showCountdown = typeof expiresInMs === "number";
 
   return (
@@ -143,20 +231,6 @@ export default function PlayEmbeddedPage() {
         )}
 
         <div className="relative aspect-video bg-slate-800 rounded-lg overflow-hidden">
-          {expiresInMs === 0 && (
-            <div className="absolute inset-0 z-20 grid place-items-center bg-slate-900/75 backdrop-blur-sm">
-              <div className="text-center space-y-3">
-                <p className="text-slate-300">Tu alquiler expiró.</p>
-                <Button
-                  onClick={() => router.push(`/checkout/extender/${gameId}`)}
-                  className="bg-orange-400 hover:bg-orange-500 text-slate-900"
-                >
-                  Extender
-                </Button>
-              </div>
-            </div>
-          )}
-
           <iframe
             src={finalSrc}
             title={title}
