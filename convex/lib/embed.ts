@@ -37,10 +37,23 @@ function candidates(raw?: string | null): string[] {
   return Array.from(set);
 }
 
+function normalizeStored(raw?: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw, "https://placeholder.local");
+    const path = u.pathname || "/";
+    return path.replace(/\/+$/, "") || "/";
+  } catch {
+    return normalizePath(raw);
+  }
+}
+
 export async function findGameByEmbedUrl(
   db: DB,
   embedUrl?: string | null
 ): Promise<{ _id: Id<"games">; title: string; embedUrl?: string | null } | null> {
+  const normalizedTarget = normalizeStored(embedUrl);
+
   for (const cand of candidates(embedUrl)) {
     const snake = await db
       .query("games")
@@ -58,6 +71,16 @@ export async function findGameByEmbedUrl(
     if (camel) {
       const stored = (camel as any).embed_url ?? (camel as any).embedUrl ?? null;
       return { _id: camel._id, title: (camel as any).title, embedUrl: stored };
+    }
+  }
+
+  // Fallback: match por path normalizado si DB guardó URL absoluta
+  if (normalizedTarget) {
+    const all = await db.query("games").collect();
+    const byPath = all.find((g: any) => normalizeStored(g.embed_url ?? g.embedUrl) === normalizedTarget);
+    if (byPath) {
+      const stored = (byPath as any).embed_url ?? (byPath as any).embedUrl ?? null;
+      return { _id: (byPath as any)._id, title: (byPath as any).title, embedUrl: stored };
     }
   }
 
