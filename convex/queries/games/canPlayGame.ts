@@ -7,8 +7,6 @@ export const canPlayGame = query({
     gameId: v.id("games"),
   },
   handler: async (ctx, { userId, gameId }) => {
-    console.log("🔥 Ejecutando canPlayGame v4", { userId, gameId });
-
     const game = await ctx.db.get(gameId);
     if (!game) {
       return { canPlay: false, reason: "not_found", expiresAt: null };
@@ -20,10 +18,6 @@ export const canPlayGame = query({
 
     const profile = await ctx.db.get(userId);
     const role = profile?.role ?? "free";
-
-    if (role === "admin") {
-      return { canPlay: true, reason: null, expiresAt: null };
-    }
 
     const now = Date.now();
     const txs = await ctx.db
@@ -52,11 +46,17 @@ export const canPlayGame = query({
 
     const owns = hasPurchase || !!activeRental;
 
-    // Juegos free: basta con estar logueado (no exigimos compra/alquiler)
-    if ((game as any).plan === "free") {
+    // 1) Juegos FREE: pasan sin validar
+    if (game.plan === "free") {
       return { canPlay: true, reason: null, expiresAt: null };
     }
 
+    // 2) Si es Premium y el usuario también → pasa
+    if (game.plan === "premium" && role === "premium") {
+      return { canPlay: true, reason: null, expiresAt: null };
+    }
+
+    // 3) Juegos de compra/alquiler: validar biblioteca
     if (!owns) {
       if (expiredRental) {
         return { canPlay: false, reason: "rental_required", expiresAt: null };
@@ -64,6 +64,7 @@ export const canPlayGame = query({
       return { canPlay: false, reason: "purchase_required", expiresAt: null };
     }
 
+    // 4) Si llegó hasta acá → tiene acceso
     return {
       canPlay: true,
       reason: null,
