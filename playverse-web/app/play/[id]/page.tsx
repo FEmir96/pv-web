@@ -6,51 +6,56 @@ import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
 
 import { api } from "@convex/_generated/api";
-
 import type { Id } from "@convex/_generated/dataModel";
+
 import RankingButton from "@/components/RankingButton";
 import { Button } from "@/components/ui/button";
 
-const getGameByIdRef = api.queries.getGameById.getGameById as any;
-const getUserByEmailRef = api.queries.getUserByEmail.getUserByEmail as any;
-const canPlayGameRef = api.queries.canPlayGame.canPlayGame as any;
+// Convex refs CORRECTOS
+const getGameByIdRef = api.queries.getGameById;
+const getUserByEmailRef = api.queries.getUserByEmail;
+const canPlayGameRef = api.queries.games.canPlayGame; // 🔥 ESTA ES LA RUTA REAL
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
   const params = useParams();
 
-  // Game Id de la URL
+  // Game Id seguro
   const gameId = useMemo(() => {
-    const raw = params?.id as string | string[] | undefined;
+    const raw = params?.id;
+    if (!raw) return null;
     return Array.isArray(raw) ? raw[0] : raw;
   }, [params]);
 
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // -------------------------------------------------------
-  // Queries correctas sin condicionales rotos
-  // -------------------------------------------------------
-  const game = useQuery(
-    getGameByIdRef,
-    gameId ? { id: gameId as Id<"games"> } : "skip"
-  );
+  // Si NO hay gameId → bloquear YA MISMO
+  if (!gameId) {
+    return (
+      <Blocked
+        title="Error"
+        text="ID de juego inválido."
+        buttonText="Volver"
+        onClick={() => router.push("/")}
+      />
+    );
+  }
 
+  // Queries
+  const game = useQuery(getGameByIdRef, { id: gameId as Id<"games"> });
   const profile = useQuery(
     getUserByEmailRef,
     email ? { email } : "skip"
   );
-
   const canPlay = useQuery(
     canPlayGameRef,
-    email && profile?._id && gameId
+    email && profile?._id
       ? { userId: profile._id, gameId: gameId as Id<"games"> }
       : "skip"
   );
 
-  // -------------------------------------------------------
-  // Loading
-  // -------------------------------------------------------
+  // Loading inicial
   if (!game || (email && !profile) || (email && !canPlay)) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-200">
@@ -62,9 +67,7 @@ export default function PlayEmbeddedPage() {
   const title = game?.title ?? "Juego";
   const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
 
-  // -------------------------------------------------------
   // No logueado
-  // -------------------------------------------------------
   if (!email) {
     return (
       <Blocked
@@ -76,9 +79,7 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // -------------------------------------------------------
   // Juego inexistente
-  // -------------------------------------------------------
   if (!game) {
     return (
       <Blocked
@@ -90,9 +91,7 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // -------------------------------------------------------
-  // Juego no embebible
-  // -------------------------------------------------------
+  // No embebible
   if (!embedUrl) {
     return (
       <Blocked
@@ -104,9 +103,7 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // -------------------------------------------------------
-  // VALIDACIÓN DE ACCESO
-  // -------------------------------------------------------
+  // Validación de acceso
   if (!canPlay.canPlay) {
     let msg = "No tenés acceso a este juego.";
     let btn = "Volver";
@@ -125,7 +122,7 @@ export default function PlayEmbeddedPage() {
     }
 
     if (canPlay.reason === "rental_required") {
-      msg = "Tu alquiler está vencido o no tienes uno activo.";
+      msg = "Tu alquiler está vencido o no tenés uno activo.";
       btn = "Alquilar";
       href = `/checkout/alquiler/${gameId}`;
     }
@@ -140,13 +137,11 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // -------------------------------------------------------
-  // SI LLEGA ACÁ → PUEDE JUGAR
-  // -------------------------------------------------------
+  // Usuario puede jugar → armamos URL final
   const qs =
     embedUrl.includes("?")
-      ? "&" + new URLSearchParams({ email, gid: gameId! }).toString()
-      : "?" + new URLSearchParams({ email, gid: gameId! }).toString();
+      ? "&" + new URLSearchParams({ email, gid: gameId }).toString()
+      : "?" + new URLSearchParams({ email, gid: gameId }).toString();
 
   const finalSrc = embedUrl + qs;
 

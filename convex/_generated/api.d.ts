@@ -125,7 +125,6 @@ import type * as queries_listGamesMinimal from "../queries/listGamesMinimal.js";
 import type * as queries_listGamesWithoutCover from "../queries/listGamesWithoutCover.js";
 import type * as queries_listGamesWithoutDetails from "../queries/listGamesWithoutDetails.js";
 import type * as queries_listGamesWithoutTrailer from "../queries/listGamesWithoutTrailer.js";
-import type * as queries_ownsGame from "../queries/ownsGame.js";
 import type * as queries_passwordReset from "../queries/passwordReset.js";
 import type * as queries_scores_getMyBestByGame from "../queries/scores/getMyBestByGame.js";
 import type * as queries_scores_topByGame from "../queries/scores/topByGame.js";
@@ -256,7 +255,6 @@ declare const fullApi: ApiFromModules<{
   "queries/listGamesWithoutCover": typeof queries_listGamesWithoutCover;
   "queries/listGamesWithoutDetails": typeof queries_listGamesWithoutDetails;
   "queries/listGamesWithoutTrailer": typeof queries_listGamesWithoutTrailer;
-  "queries/ownsGame": typeof queries_ownsGame;
   "queries/passwordReset": typeof queries_passwordReset;
   "queries/scores/getMyBestByGame": typeof queries_scores_getMyBestByGame;
   "queries/scores/topByGame": typeof queries_scores_topByGame;
