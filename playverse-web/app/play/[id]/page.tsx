@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
@@ -11,16 +11,16 @@ import type { Id } from "@convex/_generated/dataModel";
 import RankingButton from "@/components/RankingButton";
 import { Button } from "@/components/ui/button";
 
-// Convex refs
-const getGameByIdRef = api.queries.getGameById.getGameById;
-const getUserByEmailRef = api.queries.getUserByEmail.getUserByEmail;
-const canPlayGameRef = api.queries.canPlayGame.canPlayGame;
+// Convex refs CORRECTOS
+const getGameByIdRef = api.queries.getGameById;
+const getUserByEmailRef = api.queries.getUserByEmail;
+const canPlayGameRef = api.queries.canPlayGame;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
   const params = useParams();
 
-  // ID de juego
+  // Resolver ID de la URL
   const gameId = useMemo(() => {
     const raw = params?.id;
     if (!raw) return null;
@@ -30,14 +30,8 @@ export default function PlayEmbeddedPage() {
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // LOG: datos iniciales
-  useEffect(() => {
-    console.log("🎮 [DEBUG FRONT] gameId →", gameId);
-    console.log("👤 [DEBUG FRONT] session email →", email);
-  }, [gameId, email]);
-
+  // Si no hay gameId → error inmediato
   if (!gameId) {
-    console.log("❌ [DEBUG FRONT] gameId inválido. params:", params);
     return (
       <Blocked
         title="Error"
@@ -63,19 +57,6 @@ export default function PlayEmbeddedPage() {
       : "skip"
   );
 
-  // LOGS cuando llegan datos
-  useEffect(() => {
-    console.log("🎮 [DEBUG FRONT] game →", game);
-  }, [game]);
-
-  useEffect(() => {
-    console.log("👤 [DEBUG FRONT] profile →", profile);
-  }, [profile]);
-
-  useEffect(() => {
-    console.log("🔐 [DEBUG FRONT] canPlay →", canPlay);
-  }, [canPlay]);
-
   // Loading
   if (!game || (email && !profile) || (email && !canPlay)) {
     return (
@@ -88,12 +69,8 @@ export default function PlayEmbeddedPage() {
   const title = game?.title ?? "Juego";
   const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
 
-  // LOG
-  console.log("🌐 [DEBUG FRONT] embedUrl →", embedUrl);
-
-  // No logueado
+  // Usuario NO logueado
   if (!email) {
-    console.log("🔒 [DEBUG FRONT] Usuario NO logueado");
     return (
       <Blocked
         title={title}
@@ -106,7 +83,6 @@ export default function PlayEmbeddedPage() {
 
   // Juego inexistente
   if (!game) {
-    console.log("❌ [DEBUG FRONT] Juego no encontrado");
     return (
       <Blocked
         title="Error"
@@ -117,9 +93,8 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // No embebible
+  // No tiene embed
   if (!embedUrl) {
-    console.log("❌ [DEBUG FRONT] Juego sin embedUrl");
     return (
       <Blocked
         title={title}
@@ -130,10 +105,8 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Validación de acceso
+  // Validación del backend
   if (!canPlay.canPlay) {
-    console.log("🚫 [DEBUG FRONT] canPlayGame bloqueó acceso. Razón:", canPlay.reason);
-
     let msg = "No tenés acceso a este juego.";
     let btn = "Volver";
     let href = `/juego/${gameId}`;
@@ -151,7 +124,7 @@ export default function PlayEmbeddedPage() {
     }
 
     if (canPlay.reason === "rental_required") {
-      msg = "Tu alquiler está vencido o no tenés uno activo.";
+      msg = "Tu alquiler venció o no tenés uno activo.";
       btn = "Alquilar";
       href = `/checkout/alquiler/${gameId}`;
     }
@@ -166,19 +139,15 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // SI PUEDE JUGAR → construir QS
+  // Construcción de la URL final con email y gid
   const qsParams = new URLSearchParams({
     email: email ?? "",
     gid: gameId ?? "",
   }).toString();
 
-  console.log("🔗 [DEBUG FRONT] QueryString generado →", qsParams);
-
   const finalSrc = embedUrl.includes("?")
     ? `${embedUrl}&${qsParams}`
     : `${embedUrl}?${qsParams}`;
-
-  console.log("▶️ [DEBUG FRONT] iframe src FINAL →", finalSrc);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
@@ -217,9 +186,8 @@ export default function PlayEmbeddedPage() {
   );
 }
 
-// -------------------------------------------------------
-// COMPONENTE BLOQUEADO
-// -------------------------------------------------------
+/* ------------------------------ COMPONENTE BLOQUEADO ------------------------------ */
+
 function Blocked({
   title,
   text,
