@@ -14,9 +14,12 @@ import { Button } from "@/components/ui/button";
 // --------------------------
 // CONVEX REFS
 // --------------------------
-const getGameByIdRef = api.queries.getGameById;
-const getUserByEmailRef = api.queries.getUserByEmail;
-const canPlayGameRef = api.queries.games.canPlayGame;
+const getGameByIdRef = api.queries.getGameById.getGameById as any;
+const getUserByEmailRef = api.queries.getUserByEmail.getUserByEmail as any;
+const canPlayGameRef =
+  api.queries.games?.canPlayGame?.canPlayGame ??
+  api.queries.canPlayGame?.canPlayGame ??
+  api.queries.games?.canPlayGame;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();

@@ -4,43 +4,26 @@ import { v } from "convex/values";
 
 export const getIdByEmbedUrl = query({
   args: { embedUrl: v.string() },
-
   handler: async (ctx, { embedUrl }) => {
-    if (!embedUrl) return null;
+    const games = await ctx.db.query("games").collect();
 
-    const clean = embedUrl.trim().toLowerCase();
+    const norm = (s: string) =>
+      s.trim().toLowerCase().replace(/\/+$/, "");
 
-    // Leer TODOS los juegos (tu tabla es chica, es seguro)
-    const allGames = await ctx.db.query("games").collect();
+    const target = norm(embedUrl);
 
-    // Normalizar y buscar coincidencias
-    const match = allGames.find((g) => {
-      const a = (g.embedUrl ?? g.embed_url ?? "").toLowerCase();
-      return a === clean;
+    const found = games.find((g: any) => {
+      const a = g.embedUrl ? norm(g.embedUrl) : null;
+      const b = g.embed_url ? norm(g.embed_url) : null;
+      return a === target || b === target;
     });
 
-    if (match) {
-      return {
-        id: match._id,
-        title: match.title,
-        embedUrl: match.embedUrl ?? match.embed_url,
-      };
-    }
+    if (!found) return null;
 
-    // Intento por coincidencia parcial /tetris, /arena, etc.
-    const rel = allGames.find((g) => {
-      const a = (g.embedUrl ?? g.embed_url ?? "").toLowerCase();
-      return a.includes(clean);
-    });
-
-    if (rel) {
-      return {
-        id: rel._id,
-        title: rel.title,
-        embedUrl: rel.embedUrl ?? rel.embed_url,
-      };
-    }
-
-    return null;
+    return {
+      id: found._id,
+      title: found.title,
+      embedUrl: found.embedUrl ?? found.embed_url ?? embedUrl,
+    };
   },
 });
