@@ -9,23 +9,26 @@ export const canPlayGame = query({
   handler: async (ctx, { userId, gameId }) => {
     const game = await ctx.db.get(gameId);
     if (!game) {
-      return { canPlay: false, reason: "not_found" as const, expiresAt: null as number | null };
+      return { canPlay: false, reason: "not_found" as const, expiresAt: null };
     }
 
-    // 🔒 Requiere login SIEMPRE
+    // Requiere login
     if (!userId) {
       return { canPlay: false, reason: "login" as const, expiresAt: null };
     }
 
+    // Perfil
     const profile = await ctx.db.get(userId);
     const role = (profile as any)?.role as "free" | "premium" | "admin" | undefined;
 
-    // 👑 Admin siempre puede
+    // Admin entra siempre
     if (role === "admin") {
       return { canPlay: true, reason: null, expiresAt: null };
     }
 
     const now = Date.now();
+
+    // Transacciones del usuario
     const userTx = await ctx.db
       .query("transactions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -52,33 +55,40 @@ export const canPlayGame = query({
 
     const ownsGame = hasPurchase || !!activeRental;
 
-    const plan = (game as any).plan as "free" | "premium" | "paid" | undefined;
+    // ============================================================================
+    // 🔥 PARCHE: JUEGO "FREE" PERO CON PRECIO = ES JUEGO DE PAGO
+    // ============================================================================
+    const hasPrice = typeof (game as any).price === "number" && (game as any).price > 0;
 
-    // 🎮 FREE → solo login
-    if (plan === "free") {
-      return { canPlay: true, reason: null, expiresAt: null };
-    }
+    // plan real = lo que está en DB, PERO si tiene precio => se fuerza a premium
+    const effectivePlan: "free" | "premium" =
+      hasPrice ? "premium" : ((game as any).plan ?? "free");
 
-    // 🎮 PREMIUM → requiere rol premium o compra/alquiler
-    if (plan === "premium") {
-      if (role === "premium" || ownsGame) {
-        return { canPlay: true, reason: null, expiresAt: activeRental?.expiresAt ?? null };
+    // ============================================================================
+
+    // 🎮 LÓGICA FINAL DE ACCESO
+    if (effectivePlan === "premium") {
+      // Premium requiere rol + compra/alquiler
+      if (role !== "premium") {
+        return { canPlay: false, reason: "premium_required" as const, expiresAt: null };
       }
+
+      if (ownsGame) {
+        return {
+          canPlay: true,
+          reason: null,
+          expiresAt: activeRental?.expiresAt ?? null,
+        };
+      }
+
       if (expiredRental) {
         return { canPlay: false, reason: "rental_required" as const, expiresAt: null };
       }
-      return { canPlay: false, reason: "premium_required" as const, expiresAt: null };
+
+      return { canPlay: false, reason: "purchase_required" as const, expiresAt: null };
     }
 
-    // 🎮 PAID (por defecto si no es free/premium) → requiere compra/alquiler
-    if (ownsGame) {
-      return { canPlay: true, reason: null, expiresAt: activeRental?.expiresAt ?? null };
-    }
-
-    if (expiredRental) {
-      return { canPlay: false, reason: "rental_required" as const, expiresAt: null };
-    }
-
-    return { canPlay: false, reason: "purchase_required" as const, expiresAt: null };
+    // Free real
+    return { canPlay: true, reason: null, expiresAt: null };
   },
 });
