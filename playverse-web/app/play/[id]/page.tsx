@@ -11,10 +11,10 @@ import type { Id } from "@convex/_generated/dataModel";
 import RankingButton from "@/components/RankingButton";
 import { Button } from "@/components/ui/button";
 
-// Convex refs CORRECTOS
+// Convex refs
 const getGameByIdRef = api.queries.getGameById;
 const getUserByEmailRef = api.queries.getUserByEmail;
-const canPlayGameRef = api.queries.games.canPlayGame; // 🔥 ESTA ES LA RUTA REAL
+const canPlayGameRef = api.queries.canPlayGame;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function PlayEmbeddedPage() {
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // Si NO hay gameId → bloquear YA MISMO
+  // Si NO hay gameId → bloquear ya
   if (!gameId) {
     return (
       <Blocked
@@ -44,10 +44,12 @@ export default function PlayEmbeddedPage() {
 
   // Queries
   const game = useQuery(getGameByIdRef, { id: gameId as Id<"games"> });
+
   const profile = useQuery(
     getUserByEmailRef,
     email ? { email } : "skip"
   );
+
   const canPlay = useQuery(
     canPlayGameRef,
     email && profile?._id
@@ -55,7 +57,7 @@ export default function PlayEmbeddedPage() {
       : "skip"
   );
 
-  // Loading inicial
+  // Loading
   if (!game || (email && !profile) || (email && !canPlay)) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-200">
@@ -103,7 +105,7 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Validación de acceso
+  // Acceso denegado según Convex
   if (!canPlay.canPlay) {
     let msg = "No tenés acceso a este juego.";
     let btn = "Volver";
@@ -137,13 +139,15 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Usuario puede jugar → armamos URL final
-  const qs =
-    embedUrl.includes("?")
-      ? "&" + new URLSearchParams({ email, gid: gameId }).toString()
-      : "?" + new URLSearchParams({ email, gid: gameId }).toString();
+  // SI PUEDE JUGAR → armamos QS sin nulls
+  const qsParams = new URLSearchParams({
+    email,
+    gid: gameId ?? ""
+  }).toString();
 
-  const finalSrc = embedUrl + qs;
+  const finalSrc = embedUrl.includes("?")
+    ? `${embedUrl}&${qsParams}`
+    : `${embedUrl}?${qsParams}`;
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
