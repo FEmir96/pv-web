@@ -6,30 +6,37 @@ import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
 
 import { api } from "@convex/_generated/api";
+import type { FunctionReference } from "convex/server";
 import type { Id } from "@convex/_generated/dataModel";
-
 import RankingButton from "@/components/RankingButton";
 import { Button } from "@/components/ui/button";
 
-// --------------------------
-// CONVEX REFS
-// --------------------------
-const getGameByIdRef = api.queries.getGameById.getGameById as any;
-const getUserByEmailRef = api.queries.getUserByEmail.getUserByEmail as any;
+const convexApi = api as Record<string, any>;
+
+const getGameByIdRef =
+  (convexApi?.queries?.getGameById?.getGameById ??
+    convexApi?.queries?.getGameById ??
+    convexApi?.getGameById ??
+    convexApi?.["queries/getGameById"]) as FunctionReference<"query">;
+
+const getUserByEmailRef =
+  (convexApi?.queries?.getUserByEmail?.getUserByEmail ??
+    convexApi?.queries?.getUserByEmail ??
+    convexApi?.getUserByEmail ??
+    convexApi?.["queries/getUserByEmail"]) as FunctionReference<"query">;
+
 const canPlayGameRef =
-  api.queries.games?.canPlayGame?.canPlayGame ??
-  api.queries.canPlayGame?.canPlayGame ??
-  api.queries.games?.canPlayGame;
+  (convexApi?.queries?.games?.canPlayGame?.canPlayGame ??
+    convexApi?.queries?.games?.canPlayGame ??
+    convexApi?.queries?.["games/canPlayGame"] ??
+    convexApi?.["queries/games/canPlayGame"]) as FunctionReference<"query">;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
   const params = useParams();
 
-  // --------------------------
-  // ID DE JUEGO
-  // --------------------------
   const gameId = useMemo(() => {
-    const raw = params?.id;
+    const raw = params?.id as string | string[] | undefined;
     if (!raw) return null;
     return Array.isArray(raw) ? raw[0] : raw;
   }, [params]);
@@ -38,25 +45,14 @@ export default function PlayEmbeddedPage() {
   const email = session?.user?.email?.toLowerCase() ?? null;
 
   useEffect(() => {
-    console.log("🎮 [DEBUG FRONT] gameId →", gameId);
-    console.log("👤 [DEBUG FRONT] session email →", email);
+    console.debug("[PLAY] gameId", gameId);
+    console.debug("[PLAY] session email", email);
   }, [gameId, email]);
 
-  if (!gameId) {
-    return (
-      <Blocked
-        title="Error"
-        text="ID de juego inválido."
-        buttonText="Volver"
-        onClick={() => router.push("/")}
-      />
-    );
-  }
-
-  // --------------------------
-  // QUERIES
-  // --------------------------
-  const game = useQuery(getGameByIdRef, { id: gameId as Id<"games"> });
+  const game = useQuery(
+    getGameByIdRef,
+    gameId ? { id: gameId as Id<"games"> } : "skip"
+  );
 
   const profile = useQuery(
     getUserByEmailRef,
@@ -65,49 +61,47 @@ export default function PlayEmbeddedPage() {
 
   const canPlay = useQuery(
     canPlayGameRef,
-    email && profile?._id
+    email && profile?._id && gameId
       ? { userId: profile._id, gameId: gameId as Id<"games"> }
       : "skip"
   );
 
-  // DEBUG
-  useEffect(() => console.log("🎮 [DEBUG FRONT] game →", game), [game]);
-  useEffect(() => console.log("👤 [DEBUG FRONT] profile →", profile), [profile]);
-  useEffect(() => console.log("🔐 [DEBUG FRONT] canPlay →", canPlay), [canPlay]);
+  useEffect(() => {
+    console.debug("[PLAY] game", game);
+  }, [game]);
 
-  // --------------------------
-  // LOADING STATE
-  // --------------------------
-  if (!game || (email && !profile) || (email && !canPlay)) {
-    return (
-      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-200">
-        Cargando…
-      </div>
-    );
-  }
+  useEffect(() => {
+    console.debug("[PLAY] profile", profile);
+  }, [profile]);
 
-  const title = game?.title ?? "Juego";
-  const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
+  useEffect(() => {
+    console.debug("[PLAY] canPlay", canPlay);
+  }, [canPlay]);
 
-  console.log("🌐 [DEBUG FRONT] embedUrl →", embedUrl);
-
-  // --------------------------
-  // NO LOGUEADO
-  // --------------------------
-  if (!email) {
+  if (!gameId) {
     return (
       <Blocked
-        title={title}
-        text="Debes iniciar sesión para jugar este título."
-        buttonText="Iniciar sesión"
-        onClick={() => router.push(`/auth/login?next=/play/${gameId}`)}
+        title="Error"
+        text="ID de juego invalido."
+        buttonText="Volver"
+        onClick={() => router.push("/")}
       />
     );
   }
 
-  // --------------------------
-  // JUEGO INEXISTENTE
-  // --------------------------
+  const isGameLoading = typeof game === "undefined";
+  const isProfileLoading = email ? typeof profile === "undefined" : false;
+  const isCanPlayLoading =
+    email && profile?._id ? typeof canPlay === "undefined" : false;
+
+  if (isGameLoading || isProfileLoading || isCanPlayLoading) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-200">
+        Cargando...
+      </div>
+    );
+  }
+
   if (!game) {
     return (
       <Blocked
@@ -119,83 +113,105 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // --------------------------
-  // NO EMBEBIBLE
-  // --------------------------
+  const title = game?.title ?? "Juego";
+
+  if (!email) {
+    return (
+      <Blocked
+        title={title}
+        text="Debes iniciar sesion para jugar este titulo."
+        buttonText="Iniciar sesion"
+        onClick={() => router.push(`/auth/login?next=/play/${gameId}`)}
+      />
+    );
+  }
+
+  if (profile === null) {
+    return (
+      <Blocked
+        title="Error"
+        text="No encontramos tu perfil."
+        buttonText="Volver"
+        onClick={() => router.push("/")}
+      />
+    );
+  }
+
+  const embedUrl =
+    (game as any)?.embed_url ?? (game as any)?.embedUrl ?? null;
+  console.debug("[PLAY] embedUrl", embedUrl);
+
   if (!embedUrl) {
     return (
       <Blocked
         title={title}
-        text="Este juego no tiene versión embebible."
+        text="Este juego no tiene version embebible."
         buttonText="Volver"
         onClick={() => router.push(`/juego/${gameId}`)}
       />
     );
   }
 
-  // --------------------------
-  // VALIDACIÓN DE ACCESO
-  // --------------------------
-  if (!canPlay.canPlay) {
-    console.log("🚫 [DEBUG FRONT] canPlayGame bloqueó acceso. Razón:", canPlay.reason);
+  if (!canPlay || !canPlay.canPlay) {
+    const role = (profile as any)?.role ?? null;
+    const isPremium = role === "premium" || role === "admin";
 
-    let msg = "No tenés acceso a este juego.";
-    let btn = "Volver";
-    let href = `/juego/${gameId}`;
+    let message = "No tenes acceso a este juego.";
+    let buttonText = "Volver";
+    let href: string | null = `/juego/${gameId}`;
 
-    if (canPlay.reason === "premium_required") {
-      msg = "Este título es Premium.";
-      btn = "Hacerse Premium";
-      href = "/premium";
-    }
-
-    if (canPlay.reason === "purchase_required") {
-      msg = "Debes comprar este juego.";
-      btn = "Comprar";
-      href = `/checkout/compra/${gameId}`;
-    }
-
-    if (canPlay.reason === "rental_required") {
-      msg = "Tu alquiler está vencido o no tenés uno activo.";
-      btn = "Alquilar";
-      href = `/checkout/alquiler/${gameId}`;
+    switch (canPlay?.reason) {
+      case "premium_required":
+        message = "Este juego requiere ser usuario Premium.";
+        buttonText = "Hacerse Premium";
+        href = "/premium";
+        break;
+      case "purchase_required":
+        if (isPremium) {
+          message = "Debes comprar este juego.";
+          buttonText = "Comprar";
+          href = `/checkout/compra/${gameId}`;
+        } else {
+          message = "Actualiza a Premium para comprar este juego.";
+          buttonText = "Hacerse Premium";
+          href = "/premium";
+        }
+        break;
+      case "rental_required":
+        message = "Tu alquiler esta vencido o no tienes uno activo.";
+        buttonText = "Alquilar";
+        href = `/checkout/alquiler/${gameId}`;
+        break;
+      default:
+        break;
     }
 
     return (
       <Blocked
         title={title}
-        text={msg}
-        buttonText={btn}
-        onClick={() => router.push(href)}
+        text={message}
+        buttonText={buttonText}
+        onClick={href ? () => router.push(href) : undefined}
       />
     );
   }
 
-  // --------------------------
-  // CONSTRUIR QUERYSTRING
-  // --------------------------
   const qsParams = new URLSearchParams({
-    email: email ?? "",
-    gid: gameId ?? "",
+    email,
+    gid: gameId,
   }).toString();
-
-  console.log("🔗 [DEBUG FRONT] QueryString generado →", qsParams);
+  console.debug("[PLAY] queryString", qsParams);
 
   const finalSrc = embedUrl.includes("?")
     ? `${embedUrl}&${qsParams}`
     : `${embedUrl}?${qsParams}`;
+  console.debug("[PLAY] iframe src", finalSrc);
 
-  console.log("▶️ [DEBUG FRONT] iframe src FINAL →", finalSrc);
-
-  // --------------------------
-  // RENDER FRAME
-  // --------------------------
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl md:text-2xl font-bold text-orange-400">{title}</h1>
-
           <div className="flex items-center gap-2">
             <RankingButton embedUrl={embedUrl} />
             <Button
@@ -220,16 +236,13 @@ export default function PlayEmbeddedPage() {
         </div>
 
         <p className="mt-3 text-xs text-slate-500">
-          Si el juego no carga, probá en una pestaña nueva.
+          Si el juego no carga, proba en una pestana nueva.
         </p>
       </div>
     </div>
   );
 }
 
-// -------------------------------------------------------
-// COMPONENTE BLOQUEADO
-// -------------------------------------------------------
 function Blocked({
   title,
   text,
@@ -238,17 +251,19 @@ function Blocked({
 }: {
   title: string;
   text: string;
-  buttonText: string;
-  onClick: () => void;
+  buttonText?: string;
+  onClick?: () => void;
 }) {
   return (
     <div className="min-h-screen bg-slate-900 text-white grid place-items-center px-4">
       <div className="p-6 bg-slate-800/70 border border-slate-700 rounded-xl text-center max-w-md">
         <h1 className="text-xl font-bold text-red-400 mb-2">{title}</h1>
         <p className="text-slate-300 mb-4">{text}</p>
-        <Button onClick={onClick} className="bg-red-500 hover:bg-red-600 text-white">
-          {buttonText}
-        </Button>
+        {buttonText && onClick ? (
+          <Button onClick={onClick} className="bg-red-500 hover:bg-red-600 text-white">
+            {buttonText}
+          </Button>
+        ) : null}
       </div>
     </div>
   );
