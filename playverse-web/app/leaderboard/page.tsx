@@ -22,13 +22,9 @@ const GAME_META: Record<GameKey, { title: string; embedUrl: string }> = {
 };
 
 // Convex refs
-const topByGameRef = (
-  (api as any)["queries/scores/topByGame"] as { topByGame: FunctionReference<"query"> }
-).topByGame;
+const topByGameRef = api.queries.scores.topByGame.topByGame as any;
 
-const getIdByEmbedUrlRef = (
-  (api as any)["queries/games/getIdByEmbedUrl"] as { getIdByEmbedUrl: FunctionReference<"query"> }
-).getIdByEmbedUrl;
+const getIdByEmbedUrlRef = api.queries.games.getIdByEmbedUrl.getIdByEmbedUrl as any;
 
 // ======================================================
 //                COMPONENTE PRINCIPAL
@@ -45,95 +41,21 @@ export default function LeaderboardPage() {
 
   const meta = GAME_META[selected];
 
-  // Fallbacks
-  const tetrisAbs = GAME_META.tetris.embedUrl;
-  let tetrisRel = "/tetris";
-  try {
-    if (tetrisAbs) {
-      const u = new URL(tetrisAbs, "https://example.org");
-      tetrisRel = u.pathname || "/tetris";
-    }
-  } catch {}
-
-  const arenaAbs = GAME_META.arena.embedUrl;
-  let arenaMain = "/arena";
-  try {
-    if (arenaAbs) {
-      const u = new URL(arenaAbs, "https://example.org");
-      arenaMain = u.pathname || "/arena";
-    }
-  } catch {}
-  const arenaStatic = "/static-games/arena";
-
   // ======================================================
   //                SCORES QUERY
   // ======================================================
-  const rowsPrimary = useQuery(
-    topByGameRef as any,
-    { embedUrl: meta.embedUrl, limit: 25 } as any
+  const rows = useQuery(
+    topByGameRef,
+    { embedUrl: meta.embedUrl, limit: 25 }
   ) as any[] | undefined;
-
-  const rowsTetrisFallback = useQuery(
-    topByGameRef as any,
-    { embedUrl: tetrisRel, limit: 25 } as any
-  ) as any[] | undefined;
-
-  const rowsArenaMain = useQuery(
-    topByGameRef as any,
-    { embedUrl: arenaMain, limit: 25 } as any
-  ) as any[] | undefined;
-
-  const rowsArenaStatic = useQuery(
-    topByGameRef as any,
-    { embedUrl: arenaStatic, limit: 25 } as any
-  ) as any[] | undefined;
-
-  const rows =
-    selected === "tetris"
-      ? (rowsPrimary?.length ? rowsPrimary : rowsTetrisFallback)
-      : selected === "arena"
-      ? rowsPrimary?.length
-        ? rowsPrimary
-        : rowsArenaMain?.length
-        ? rowsArenaMain
-        : rowsArenaStatic
-      : rowsPrimary;
 
   // ======================================================
   //       RESOLVER /play/[id]
   // ======================================================
-  const selectedInfoPrimary = useQuery(
-    getIdByEmbedUrlRef as any,
+  const selectedInfo = useQuery(
+    getIdByEmbedUrlRef,
     { embedUrl: meta.embedUrl } as any
   ) as { id: string } | null | undefined;
-
-  const tetrisInfoAbs = useQuery(
-    getIdByEmbedUrlRef as any,
-    { embedUrl: tetrisAbs } as any
-  ) as { id: string } | null | undefined;
-
-  const tetrisInfoRel = useQuery(
-    getIdByEmbedUrlRef as any,
-    { embedUrl: tetrisRel } as any
-  ) as { id: string } | null | undefined;
-
-  const arenaInfoMain = useQuery(
-    getIdByEmbedUrlRef as any,
-    { embedUrl: arenaMain } as any
-  ) as { id: string } | null | undefined;
-
-  const arenaInfoStaticQ = useQuery(
-    getIdByEmbedUrlRef as any,
-    { embedUrl: arenaStatic } as any
-  ) as { id: string } | null | undefined;
-
-  const selectedInfo =
-    selected === "tetris"
-      ? tetrisInfoAbs ?? tetrisInfoRel ?? selectedInfoPrimary
-      : selected === "arena"
-      ? selectedInfoPrimary ?? arenaInfoMain ?? arenaInfoStaticQ
-      : selectedInfoPrimary;
-
   const playHrefSelected = selectedInfo?.id ? `/play/${selectedInfo.id}` : undefined;
 
 // ======================================================
@@ -160,24 +82,11 @@ export default function LeaderboardPage() {
     <main className="min-h-screen bg-slate-900 text-slate-200">
       <div className="mx-auto max-w-[1200px] px-4 pt-6 pb-12">
 
-        {/* CTA */}
+        {/* Título */}
         <div className="mb-6 flex items-center justify-between gap-3">
           <h1 className="text-3xl font-extrabold tracking-tight text-amber-400 drop-shadow-sm">
             Leaderboard
           </h1>
-
-          {playHrefSelected ? (
-            <Link
-              href={playHrefSelected}
-              className="inline-flex items-center rounded-full bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold px-4 py-2 shadow ring-1 ring-amber-300/40 transition"
-            >
-              Jugar {meta.title}
-            </Link>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-slate-700 text-slate-300 px-4 py-2 text-sm">
-              Resolviendo acceso…
-            </span>
-          )}
         </div>
 
         {/* Tabs */}
