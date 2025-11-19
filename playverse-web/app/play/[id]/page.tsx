@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
@@ -18,17 +18,15 @@ export default function PlayEmbeddedPage() {
   const router = useRouter();
   const params = useParams();
 
-  // ❗ GameID nunca cambia
   const gameId = useMemo(() => {
-    const raw = (params?.id as string | string[] | undefined) ?? null;
-    return Array.isArray(raw) ? raw[0] : raw;
+    const raw = params?.id as string | string[] | undefined;
+    return Array.isArray(raw) ? raw[0] : raw ?? null;
   }, [params]);
 
-  // ❗ Sesión
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // ❗ Queries SIN CONDICIONALES (React seguro)
+  // Queries
   const game = useQuery(
     getGameByIdRef,
     gameId ? { id: gameId as Id<"games"> } : "skip"
@@ -46,7 +44,7 @@ export default function PlayEmbeddedPage() {
       : "skip"
   );
 
-  // ❗ Si falta algo → pantalla de carga universal (simple & estable)
+  // Pantalla universal de carga
   if (!game || (email && !profile) || (email && !canPlay)) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-200">
@@ -58,7 +56,6 @@ export default function PlayEmbeddedPage() {
   const title = game?.title ?? "Juego";
   const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
 
-  // ❗ Caso: no logueado
   if (!email) {
     return (
       <Blocked
@@ -70,7 +67,6 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // ❗ Caso: juego no existe
   if (!game) {
     return (
       <Blocked
@@ -82,7 +78,6 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // ❗ Caso: no embebible
   if (!embedUrl) {
     return (
       <Blocked
@@ -94,7 +89,6 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // ❗ Caso: no tiene acceso
   if (!canPlay.canPlay) {
     let msg = "No tenés acceso a este juego.";
     let btn = "Volver";
@@ -128,7 +122,7 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // ❗ SI LLEGA ACÁ → EL USUARIO PUEDE JUGAR
+  // Usuario habilitado a jugar
   const qs =
     embedUrl.includes("?")
       ? "&" + new URLSearchParams({ email, gid: gameId! }).toString()
@@ -159,7 +153,7 @@ export default function PlayEmbeddedPage() {
             src={finalSrc}
             className="w-full h-full"
             title={title}
-            allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write;"
+            allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write"
             referrerPolicy="no-referrer"
             allowFullScreen
           />

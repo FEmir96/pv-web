@@ -24,24 +24,18 @@ const GAME_META: Record<GameKey, { title: string; embedUrl: string }> = {
 
 // Convex refs
 const topByGameRef = (
-  (api as any)["queries/scores/topByGame"] as {
-    topByGame: FunctionReference<"query">;
-  }
+  (api as any)["queries/scores/topByGame"] as { topByGame: FunctionReference<"query"> }
 ).topByGame;
 
 const getIdByEmbedUrlRef = (
-  (api as any)["queries/games/getIdByEmbedUrl"] as {
-    getIdByEmbedUrl: FunctionReference<"query">;
-  }
+  (api as any)["queries/games/getIdByEmbedUrl"] as { getIdByEmbedUrl: FunctionReference<"query"> }
 ).getIdByEmbedUrl;
 
 const getUserByEmailRef =
-  (api as any)["queries/getUserByEmail"]
-    .getUserByEmail as FunctionReference<"query">;
+  (api as any)["queries/getUserByEmail"].getUserByEmail as FunctionReference<"query">;
 
 const ownsGameRef =
-  (api as any)["queries/ownsGame"]
-    .ownsGame as FunctionReference<"query">;
+  (api as any)["queries/ownsGame"].ownsGame as FunctionReference<"query">;
 
 // ======================================================
 //                COMPONENTE PRINCIPAL
@@ -53,7 +47,7 @@ export default function LeaderboardPage() {
 
   const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // --- Perfil Convex ---
+  // Perfil Convex
   const profile = useQuery(
     getUserByEmailRef as any,
     email ? { email } : "skip"
@@ -61,7 +55,7 @@ export default function LeaderboardPage() {
 
   const userId = profile?._id ?? null;
 
-  // --- Juego seleccionado ---
+  // Juego seleccionado
   const gameParam = (params.get("game") || "") as GameKey;
   const selected: GameKey = ["snake", "pulse-riders", "tetris", "arena"].includes(gameParam)
     ? gameParam
@@ -69,7 +63,7 @@ export default function LeaderboardPage() {
 
   const meta = GAME_META[selected];
 
-  // PARSEOS/FALLBACKS
+  // Fallbacks
   const tetrisAbs = GAME_META.tetris.embedUrl;
   let tetrisRel = "/tetris";
   try {
@@ -95,22 +89,22 @@ export default function LeaderboardPage() {
   const rowsPrimary = useQuery(
     topByGameRef as any,
     { embedUrl: meta.embedUrl, limit: 25 } as any
-  );
+  ) as any[] | undefined;
 
   const rowsTetrisFallback = useQuery(
     topByGameRef as any,
     { embedUrl: tetrisRel, limit: 25 } as any
-  );
+  ) as any[] | undefined;
 
   const rowsArenaMain = useQuery(
     topByGameRef as any,
     { embedUrl: arenaMain, limit: 25 } as any
-  );
+  ) as any[] | undefined;
 
   const rowsArenaStatic = useQuery(
     topByGameRef as any,
     { embedUrl: arenaStatic, limit: 25 } as any
-  );
+  ) as any[] | undefined;
 
   const rows =
     selected === "tetris"
@@ -124,32 +118,32 @@ export default function LeaderboardPage() {
       : rowsPrimary;
 
   // ======================================================
-  //       RESOLVER /play/[id] DEL JUEGO
+  //       RESOLVER /play/[id]
   // ======================================================
   const selectedInfoPrimary = useQuery(
     getIdByEmbedUrlRef as any,
     { embedUrl: meta.embedUrl } as any
-  );
+  ) as { id: string } | null | undefined;
 
   const tetrisInfoAbs = useQuery(
     getIdByEmbedUrlRef as any,
     { embedUrl: tetrisAbs } as any
-  );
+  ) as { id: string } | null | undefined;
 
   const tetrisInfoRel = useQuery(
     getIdByEmbedUrlRef as any,
     { embedUrl: tetrisRel } as any
-  );
+  ) as { id: string } | null | undefined;
 
   const arenaInfoMain = useQuery(
     getIdByEmbedUrlRef as any,
     { embedUrl: arenaMain } as any
-  );
+  ) as { id: string } | null | undefined;
 
   const arenaInfoStaticQ = useQuery(
     getIdByEmbedUrlRef as any,
     { embedUrl: arenaStatic } as any
-  );
+  ) as { id: string } | null | undefined;
 
   const selectedInfo =
     selected === "tetris"
@@ -161,22 +155,27 @@ export default function LeaderboardPage() {
   const playHrefSelected = selectedInfo?.id ? `/play/${selectedInfo.id}` : undefined;
 
   // ======================================================
-  //       VALIDAR SI EL USUARIO POSEE EL JUEGO
+  //       VALIDAR SI POSEE EL JUEGO
   // ======================================================
-  const owns = useQuery(
-    ownsGameRef as any,
-    userId && selectedInfo?.id
-      ? { userId, gameId: selectedInfo.id }
-      : "skip"
-  ) as boolean | undefined;
+  const owns =
+    useQuery(
+      ownsGameRef as any,
+      userId && selectedInfo?.id
+        ? { userId, gameId: selectedInfo.id }
+        : "skip"
+    ) as { owns: boolean } | null | undefined;
 
   const disabled =
-    !playHrefSelected || !userId || owns === false;
+    !playHrefSelected ||
+    !userId ||
+    owns === undefined ||
+    owns === null ||
+    owns.owns === false;
 
-  // Helper fechas
-  const when = (t?: number) => (t ? new Date(t).toLocaleString() : "-");
+  // ======================================================
+  // UI
+  // ======================================================
 
-  // UI interno
   const Tab = ({ k, children }: { k: GameKey; children: React.ReactNode }) => {
     const active = selected === k;
     return (
@@ -197,9 +196,7 @@ export default function LeaderboardPage() {
     <main className="min-h-screen bg-slate-900 text-slate-200">
       <div className="mx-auto max-w-[1200px] px-4 pt-6 pb-12">
 
-        {/* -------------------------------------- */}
-        {/*      TITULO + CTA JUGAR                */}
-        {/* -------------------------------------- */}
+        {/* CTA */}
         <div className="mb-6 flex items-center justify-between gap-3">
           <h1 className="text-3xl font-extrabold tracking-tight text-amber-400 drop-shadow-sm">
             Leaderboard
@@ -229,12 +226,9 @@ export default function LeaderboardPage() {
               Resolviendo acceso…
             </span>
           )}
-
         </div>
 
-        {/* -------------------------------------- */}
-        {/*               TABS                     */}
-        {/* -------------------------------------- */}
+        {/* Tabs */}
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <Tab k="snake">Snake (Freeware)</Tab>
           <Tab k="pulse-riders">Pulse Riders</Tab>
@@ -242,9 +236,7 @@ export default function LeaderboardPage() {
           <Tab k="arena">Twin-Stick Arena</Tab>
         </div>
 
-        {/* -------------------------------------- */}
-        {/*          TABLA DE SCORES               */}
-        {/* -------------------------------------- */}
+        {/* Tabla */}
         <div className="rounded-xl border border-slate-700 bg-slate-800/60 overflow-hidden">
           <div className="px-4 py-3 text-amber-300 font-semibold border-b border-slate-700">
             Top 25 — {meta.title}
@@ -261,41 +253,43 @@ export default function LeaderboardPage() {
                   <th className="px-4 py-2 text-left">Actualizado</th>
                 </tr>
               </thead>
-<tbody>
-  {(rows ?? []).map(
-    (
-      r: {
-        _id: string;
-        userName: string;
-        userEmail: string;
-        score: number;
-        updatedAt?: number;
-      },
-      i: number
-    ) => (
-      <tr key={r._id} className="border-t border-slate-700/60">
-        <td className="px-4 py-2 text-slate-400">{i + 1}</td>
-        <td className="px-4 py-2">{r.userName}</td>
-        <td className="px-4 py-2 text-slate-300">{r.userEmail}</td>
-        <td className="px-4 py-2 font-semibold text-cyan-300">{r.score}</td>
-        <td className="px-4 py-2 text-slate-400">
-          {r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "-"}
-        </td>
-      </tr>
-    )
-  )}
 
-  {(!rows || rows.length === 0) && (
-    <tr>
-      <td className="px-4 py-8 text-center text-slate-400" colSpan={5}>
-        Sin registros todavía.
-      </td>
-    </tr>
-  )}
-</tbody>
+              <tbody>
+                {(rows ?? []).map(
+                  (
+                    r: {
+                      _id: string;
+                      userName: string;
+                      userEmail: string;
+                      score: number;
+                      updatedAt?: number;
+                    },
+                    i: number
+                  ) => (
+                    <tr key={r._id} className="border-t border-slate-700/60">
+                      <td className="px-4 py-2 text-slate-400">{i + 1}</td>
+                      <td className="px-4 py-2">{r.userName}</td>
+                      <td className="px-4 py-2 text-slate-300">{r.userEmail}</td>
+                      <td className="px-4 py-2 font-semibold text-cyan-300">{r.score}</td>
+                      <td className="px-4 py-2 text-slate-400">
+                        {r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "-"}
+                      </td>
+                    </tr>
+                  )
+                )}
+
+                {(!rows || rows.length === 0) && (
+                  <tr>
+                    <td className="px-4 py-8 text-center text-slate-400" colSpan={5}>
+                      Sin registros todavía.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
             </table>
           </div>
         </div>
+
       </div>
     </main>
   );
