@@ -52,6 +52,11 @@ export const canPlayGame = query({
 
     const owns = hasPurchase || !!activeRental;
 
+    // Juegos free: basta con estar logueado (no exigimos compra/alquiler)
+    if ((game as any).plan === "free") {
+      return { canPlay: true, reason: null, expiresAt: null };
+    }
+
     if (!owns) {
       if (expiredRental) {
         return { canPlay: false, reason: "rental_required", expiresAt: null };
