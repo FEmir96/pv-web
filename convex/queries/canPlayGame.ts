@@ -1,4 +1,3 @@
-// convex/queries/canPlayGame.ts
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 
@@ -10,36 +9,20 @@ export const canPlayGame = query({
   handler: async (ctx, { userId, gameId }) => {
     const game = await ctx.db.get(gameId);
     if (!game) {
-      return {
-        canPlay: false,
-        reason: "not_found" as const,
-        expiresAt: null as number | null,
-      };
+      return { canPlay: false, reason: "not_found" as const, expiresAt: null as number | null };
     }
 
     // 🔒 Requiere login SIEMPRE
     if (!userId) {
-      return {
-        canPlay: false,
-        reason: "login" as const,
-        expiresAt: null,
-      };
+      return { canPlay: false, reason: "login" as const, expiresAt: null };
     }
 
     const profile = await ctx.db.get(userId);
-    const role = (profile as any)?.role as
-      | "free"
-      | "premium"
-      | "admin"
-      | undefined;
+    const role = (profile as any)?.role as "free" | "premium" | "admin" | undefined;
 
     // 👑 Admin siempre puede
     if (role === "admin") {
-      return {
-        canPlay: true,
-        reason: null,
-        expiresAt: null,
-      };
+      return { canPlay: true, reason: null, expiresAt: null };
     }
 
     const now = Date.now();
@@ -69,66 +52,33 @@ export const canPlayGame = query({
 
     const ownsGame = hasPurchase || !!activeRental;
 
-    // 🎮 Modelo de negocio del juego
     const plan = (game as any).plan as "free" | "premium" | "paid" | undefined;
 
-    const isFreeGame = plan === "free";
-
-    // 1) Juegos realmente FREE → solo login
-    if (isFreeGame) {
-      return {
-        canPlay: true,
-        reason: null,
-        expiresAt: null,
-      };
+    // 🎮 FREE → solo login
+    if (plan === "free") {
+      return { canPlay: true, reason: null, expiresAt: null };
     }
 
-    // 2) Juegos incluidos en Premium (plan === "premium")
+    // 🎮 PREMIUM → requiere rol premium o compra/alquiler
     if (plan === "premium") {
       if (role === "premium" || ownsGame) {
-        return {
-          canPlay: true,
-          reason: null,
-          expiresAt: activeRental?.expiresAt ?? null,
-        };
+        return { canPlay: true, reason: null, expiresAt: activeRental?.expiresAt ?? null };
       }
-
       if (expiredRental) {
-        return {
-          canPlay: false,
-          reason: "rental_required" as const,
-          expiresAt: null,
-        };
+        return { canPlay: false, reason: "rental_required" as const, expiresAt: null };
       }
-
-      return {
-        canPlay: false,
-        reason: "premium_required" as const,
-        expiresAt: null,
-      };
+      return { canPlay: false, reason: "premium_required" as const, expiresAt: null };
     }
 
-    // 3) Juegos pago por título (plan "paid" o sin plan)
+    // 🎮 PAID (por defecto si no es free/premium) → requiere compra/alquiler
     if (ownsGame) {
-      return {
-        canPlay: true,
-        reason: null,
-        expiresAt: activeRental?.expiresAt ?? null,
-      };
+      return { canPlay: true, reason: null, expiresAt: activeRental?.expiresAt ?? null };
     }
 
     if (expiredRental) {
-      return {
-        canPlay: false,
-        reason: "rental_required" as const,
-        expiresAt: null,
-      };
+      return { canPlay: false, reason: "rental_required" as const, expiresAt: null };
     }
 
-    return {
-      canPlay: false,
-      reason: "purchase_required" as const,
-      expiresAt: null,
-    };
+    return { canPlay: false, reason: "purchase_required" as const, expiresAt: null };
   },
 });

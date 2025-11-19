@@ -1,7 +1,7 @@
 // playverse-web/app/play/[id]/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
@@ -9,12 +9,9 @@ import type { FunctionReference } from "convex/server";
 import { api } from "@convex";
 import type { Id } from "@convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/lib/useAuthStore";
-import { useHouseAds } from "@/app/providers/HouseAdProvider";
 import RankingButton from "@/components/RankingButton";
-import { toast } from "sonner";
+import { useAuthStore } from "@/lib/useAuthStore";
 
-// Convex refs
 const getGameByIdRef =
   (api as any)["queries/getGameById"].getGameById as FunctionReference<"query">;
 
@@ -41,9 +38,7 @@ export default function PlayEmbeddedPage() {
   );
 
   const router = useRouter();
-
-  // Sesión
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const localUser = useAuthStore((s) => s.user);
 
   const email =
@@ -51,22 +46,11 @@ export default function PlayEmbeddedPage() {
     localUser?.email?.toLowerCase() ||
     null;
 
-  // ⛔ CORTE SEGURO: sin email no sigue nada (previene acceso al iframe)
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!email) {
-      toast.error("Debes iniciar sesión para jugar.");
-      router.replace(`/auth/login?next=/play/${gameId}`);
-    }
-  }, [email, status, router, gameId]);
-
-  // Perfil Convex
+  // Datos del usuario
   const profile = useQuery(
     getUserByEmailRef,
     email ? { email } : "skip"
   ) as { _id: Id<"profiles">; role?: "free" | "premium" | "admin" } | null | undefined;
-
-  const isAdmin = profile?.role === "admin";
 
   const game = useQuery(
     getGameByIdRef,
@@ -86,122 +70,39 @@ export default function PlayEmbeddedPage() {
     return () => clearInterval(t);
   }, []);
 
-  const title = String(game?.title ?? "Juego");
+  // Estados de carga
+  if (!email || profile === undefined || game === undefined || canPlay === undefined) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+        Cargando…
+      </div>
+    );
+  }
+
+  if (!game) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+        Juego no encontrado.
+      </div>
+    );
+  }
+
   const embedUrl = (game as any)?.embed_url ?? (game as any)?.embedUrl ?? null;
   const sandbox = (game as any)?.embed_sandbox ?? undefined;
   const allow = (game as any)?.embed_allow ?? undefined;
+  const title = game?.title ?? "Juego";
 
-  const plan = (game as any)?.plan as "free" | "premium" | undefined;
-
-  const expiresInMs = useMemo(() => {
-    if (isAdmin) return null;
-    if (!canPlay?.expiresAt) return null;
-    return Math.max(0, canPlay.expiresAt - now);
-  }, [canPlay?.expiresAt, now, isAdmin]);
-
-// 🚫 Guardia total de seguridad (nivel superior)
-useEffect(() => {
-  if (status === "loading") return;
-  if (!email) return; // ya se redirige más arriba
-
-  // Esperar datos
-  if (profile === undefined || canPlay === undefined) return;
-
-  // Admin siempre OK
-  if (profile?.role === "admin") return;
-
-  // Acceso denegado
-  if (!canPlay.canPlay) {
-    let msg = "No tenés acceso a este juego.";
-
-    if (canPlay.reason === "premium_required") msg = "Este juego requiere ser Premium.";
-    if (canPlay.reason === "purchase_required") msg = "Debés comprar este juego.";
-    if (canPlay.reason === "rental_required") msg = "Tu alquiler está vencido.";
-
-    toast.error(msg);
-    router.replace(`/juego/${gameId}`);
+  if (!embedUrl) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+        Este juego no tiene versión embebible.
+      </div>
+    );
   }
-}, [email, status, profile, canPlay, gameId, router]);
 
-// ⚠️ Corte de backup (si algo llegara antes que el useEffect)
-if (
-  !email ||
-  profile === undefined ||
-  canPlay === undefined ||
-  (!isAdmin && canPlay && !canPlay.canPlay)
-) {
-  return (
-    <div className="min-h-screen bg-slate-900 text-white grid place-items-center">
-      <div className="px-6 py-4 bg-slate-800/70 rounded-xl border border-slate-700 text-center space-y-4 max-w-md">
-        <h1 className="text-xl font-bold text-red-400">{title}</h1>
-        <p className="text-slate-300">No tenés acceso a este juego.</p>
-        <Button
-          onClick={() => router.push(`/juego/${gameId}`)}
-          className="bg-red-500 hover:bg-red-600 text-white"
-        >
-          Volver
-        </Button>
-      </div>
-    </div>
-  );
-}
+  const expiresInMs =
+    canPlay?.expiresAt != null ? Math.max(0, canPlay.expiresAt - now) : null;
 
-// 🚫 Nunca permitimos que la UI avance mientras falten datos críticos
-const loadingHard =
-  status === "loading" ||
-  !email ||
-  profile === undefined ||
-  canPlay === undefined ||
-  game === undefined;
-
-if (loadingHard) {
-  return (
-    <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
-      Cargando…
-    </div>
-  );
-}
-
-// 🚫 Si no hay juego o no es embebible, cortar aquí ANTES de montar iframe
-if (!game) {
-  return (
-    <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
-      Juego no encontrado.
-    </div>
-  );
-}
-
-if (!embedUrl) {
-  return (
-    <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
-      Este juego no tiene versión embebible.
-    </div>
-  );
-}
-
-// 🚫 Corte duro: si NO está permitido, NI SIQUIERA se monta el iframe
-if (!isAdmin && !canPlay.canPlay) {
-  return (
-    <div className="min-h-screen bg-slate-900 text-white grid place-items-center">
-      <div className="px-6 py-4 bg-slate-800/70 rounded-xl border border-slate-700 text-center space-y-4 max-w-md">
-        <h1 className="text-xl font-bold text-red-400">{title}</h1>
-        <p className="text-slate-300">No tenés acceso a este juego.</p>
-        <Button
-          onClick={() => router.push(`/juego/${gameId}`)}
-          className="bg-red-500 hover:bg-red-600 text-white"
-        >
-          Volver
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-
-
-
-
-  // Parámetros para score
   const qp: Record<string, string> = {};
   if (email) qp.email = email;
   if (gameId) qp.gid = gameId;
@@ -212,7 +113,6 @@ if (!isAdmin && !canPlay.canPlay) {
       : "";
 
   const finalSrc = embedUrl + qs;
-
   const showCountdown = typeof expiresInMs === "number";
 
   return (
@@ -220,8 +120,9 @@ if (!isAdmin && !canPlay.canPlay) {
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl md:text-2xl font-bold text-orange-400">{title}</h1>
+
           <div className="flex items-center gap-2">
-            <RankingButton embedUrl={(game as any)?.embed_url ?? (game as any)?.embedUrl ?? undefined} />
+            <RankingButton embedUrl={embedUrl} />
             <Button
               variant="outline"
               onClick={() => router.push(`/juego/${gameId}`)}
@@ -260,7 +161,10 @@ if (!isAdmin && !canPlay.canPlay) {
             src={finalSrc}
             title={title}
             className="w-full h-full"
-            allow={allow ?? "autoplay; fullscreen; gamepad; clipboard-read; clipboard-write; cross-origin-isolated"}
+            allow={
+              allow ??
+              "autoplay; fullscreen; gamepad; clipboard-read; clipboard-write; cross-origin-isolated"
+            }
             sandbox={sandbox}
             referrerPolicy="no-referrer"
             allowFullScreen
