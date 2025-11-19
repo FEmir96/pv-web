@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
@@ -20,7 +20,7 @@ export default function PlayEmbeddedPage() {
   const router = useRouter();
   const params = useParams();
 
-  // Game Id seguro
+  // ID de juego
   const gameId = useMemo(() => {
     const raw = params?.id;
     if (!raw) return null;
@@ -30,8 +30,14 @@ export default function PlayEmbeddedPage() {
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // Si NO hay gameId → bloquear ya
+  // LOG: datos iniciales
+  useEffect(() => {
+    console.log("🎮 [DEBUG FRONT] gameId →", gameId);
+    console.log("👤 [DEBUG FRONT] session email →", email);
+  }, [gameId, email]);
+
   if (!gameId) {
+    console.log("❌ [DEBUG FRONT] gameId inválido. params:", params);
     return (
       <Blocked
         title="Error"
@@ -57,6 +63,19 @@ export default function PlayEmbeddedPage() {
       : "skip"
   );
 
+  // LOGS cuando llegan datos
+  useEffect(() => {
+    console.log("🎮 [DEBUG FRONT] game →", game);
+  }, [game]);
+
+  useEffect(() => {
+    console.log("👤 [DEBUG FRONT] profile →", profile);
+  }, [profile]);
+
+  useEffect(() => {
+    console.log("🔐 [DEBUG FRONT] canPlay →", canPlay);
+  }, [canPlay]);
+
   // Loading
   if (!game || (email && !profile) || (email && !canPlay)) {
     return (
@@ -69,8 +88,12 @@ export default function PlayEmbeddedPage() {
   const title = game?.title ?? "Juego";
   const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
 
+  // LOG
+  console.log("🌐 [DEBUG FRONT] embedUrl →", embedUrl);
+
   // No logueado
   if (!email) {
+    console.log("🔒 [DEBUG FRONT] Usuario NO logueado");
     return (
       <Blocked
         title={title}
@@ -83,6 +106,7 @@ export default function PlayEmbeddedPage() {
 
   // Juego inexistente
   if (!game) {
+    console.log("❌ [DEBUG FRONT] Juego no encontrado");
     return (
       <Blocked
         title="Error"
@@ -95,6 +119,7 @@ export default function PlayEmbeddedPage() {
 
   // No embebible
   if (!embedUrl) {
+    console.log("❌ [DEBUG FRONT] Juego sin embedUrl");
     return (
       <Blocked
         title={title}
@@ -105,8 +130,10 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Acceso denegado según Convex
+  // Validación de acceso
   if (!canPlay.canPlay) {
+    console.log("🚫 [DEBUG FRONT] canPlayGame bloqueó acceso. Razón:", canPlay.reason);
+
     let msg = "No tenés acceso a este juego.";
     let btn = "Volver";
     let href = `/juego/${gameId}`;
@@ -139,15 +166,19 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // SI PUEDE JUGAR → armamos QS sin nulls
+  // SI PUEDE JUGAR → construir QS
   const qsParams = new URLSearchParams({
-    email,
-    gid: gameId ?? ""
+    email: email ?? "",
+    gid: gameId ?? "",
   }).toString();
+
+  console.log("🔗 [DEBUG FRONT] QueryString generado →", qsParams);
 
   const finalSrc = embedUrl.includes("?")
     ? `${embedUrl}&${qsParams}`
     : `${embedUrl}?${qsParams}`;
+
+  console.log("▶️ [DEBUG FRONT] iframe src FINAL →", finalSrc);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
