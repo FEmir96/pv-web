@@ -14,10 +14,8 @@ import { useAuthStore } from "@/lib/useAuthStore";
 
 const getGameByIdRef =
   (api as any)["queries/getGameById"].getGameById as FunctionReference<"query">;
-
 const getUserByEmailRef =
   (api as any)["queries/getUserByEmail"].getUserByEmail as FunctionReference<"query">;
-
 const canPlayGameRef =
   (api as any)["queries/canPlayGame"].canPlayGame as FunctionReference<"query">;
 
@@ -32,137 +30,129 @@ function msToClock(ms: number) {
 
 export default function PlayEmbeddedPage() {
   const params = useParams() as { id?: string | string[] };
-  const gameId = useMemo(
-    () => (Array.isArray(params?.id) ? params.id[0] : params?.id) as string | undefined,
-    [params]
-  );
+  const gameId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const router = useRouter();
   const { data: session } = useSession();
   const localUser = useAuthStore((s) => s.user);
-
   const email =
     session?.user?.email?.toLowerCase() ||
     localUser?.email?.toLowerCase() ||
     null;
 
-  // Perfil Convex
+  //-- 1) Query juego: siempre se ejecuta
+  const game = useQuery(
+    getGameByIdRef,
+    gameId ? { id: gameId as Id<"games"> } : "skip"
+  );
+
+  //-- 2) Perfil: solo si hay email
   const profile = useQuery(
     getUserByEmailRef,
     email ? { email } : "skip"
-  ) as { _id: Id<"profiles">; role?: "free" | "premium" | "admin" } | null | undefined;
+  );
 
-  const game = useQuery(
-    getGameByIdRef,
-    gameId ? ({ id: gameId as Id<"games"> } as any) : "skip"
-  ) as any;
-
+  //-- 3) canPlay: solo si email, profile y juego están listos
   const canPlay = useQuery(
     canPlayGameRef,
     email && profile?._id && gameId
-      ? ({ userId: profile._id, gameId: gameId as Id<"games"> } as any)
+      ? { userId: profile._id, gameId: gameId as Id<"games"> }
       : "skip"
-  ) as { canPlay: boolean; reason: string | null; expiresAt: number | null } | undefined;
+  );
 
-  // Carga dura
-  if (
-    profile === undefined ||
-    game === undefined ||
-    canPlay === undefined
-  ) {
-    return (
-      <div className="min-h-screen bg-slate-900 text-slate-300 grid place-items-center">
-        Cargando…
-      </div>
-    );
-  }
-
-  // Si no existe juego
+  // ========== LOADING CONTROL INTELIGENTE ==========
+  // Si no hay email → no es loading → se muestra guard más abajo
   if (!game) {
     return (
-      <div className="min-h-screen bg-slate-900 text-slate-300 grid place-items-center">
-        Juego no encontrado.
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+        Cargando juego…
       </div>
     );
   }
 
-  const embedUrl = (game as any)?.embed_url ?? (game as any)?.embedUrl ?? null;
-  const sandbox = (game as any)?.embed_sandbox ?? undefined;
-  const allow = (game as any)?.embed_allow ?? undefined;
-  const title = game?.title ?? "Juego";
-
-  if (!embedUrl) {
+  // Si hay email pero profile está cargando
+  if (email && profile === undefined) {
     return (
-      <div className="min-h-screen bg-slate-900 text-slate-300 grid place-items-center">
-        Este juego no tiene versión embebible.
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+        Cargando perfil…
       </div>
     );
   }
 
-  // === GUARD UI ===
-  const blocked = !canPlay.canPlay;
+  // Si hay email + profile pero todavía no vino canPlay
+  if (email && profile && canPlay === undefined) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+        Verificando acceso…
+      </div>
+    );
+  }
 
+  // ========== ANÁLISIS DE ACCESO ==========
+  const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
+  const title = game?.title ?? "Juego";
+  const sandbox = game?.embed_sandbox ?? undefined;
+  const allow = game?.embed_allow ?? undefined;
+
+  const blocked =
+    !email ||                 // no logueado
+    !canPlay?.canPlay;        // no tiene permiso
+
+  // Mensaje + CTA según el motivo
   let guardMsg = "";
   let guardCTA = null;
 
-  if (blocked) {
-    switch (canPlay.reason) {
-      case "login":
-        guardMsg = "Debes iniciar sesión para jugar este título.";
-        guardCTA = (
-          <Button
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
-            onClick={() =>
-              router.push(`/auth/login?next=/play/${gameId}`)
-            }
-          >
-            Iniciar sesión
-          </Button>
-        );
-        break;
-
-      case "premium_required":
-        guardMsg = "Este juego requiere una suscripción Premium.";
-        guardCTA = (
-          <Button
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
-            onClick={() => router.push("/premium")}
-          >
-            Hacerse Premium
-          </Button>
-        );
-        break;
-
+  if (!email) {
+    guardMsg = "Debes iniciar sesión para jugar este título.";
+    guardCTA = (
+      <Button
+        onClick={() => router.push(`/auth/login?next=/play/${gameId}`)}
+        className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+      >
+        Iniciar sesión
+      </Button>
+    );
+  } else if (!canPlay?.canPlay) {
+    switch (canPlay?.reason) {
       case "purchase_required":
-        guardMsg = "Debes comprar este juego para poder jugarlo.";
+        guardMsg = "Debes comprar este juego para jugarlo.";
         guardCTA = (
           <Button
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
             onClick={() => router.push(`/checkout/compra/${gameId}`)}
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
           >
             Comprar juego
           </Button>
         );
         break;
-
       case "rental_required":
-        guardMsg = "Tu alquiler está vencido o no tienes alquiler activo.";
+        guardMsg = "Tu alquiler está vencido o no tienes uno activo.";
         guardCTA = (
           <Button
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
             onClick={() => router.push(`/checkout/alquiler/${gameId}`)}
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
           >
             Alquilar juego
           </Button>
         );
         break;
-
+      case "premium_required":
+        guardMsg = "Este juego requiere suscripción Premium.";
+        guardCTA = (
+          <Button
+            onClick={() => router.push(`/premium`)}
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+          >
+            Hacerse Premium
+          </Button>
+        );
+        break;
       default:
         guardMsg = "No tienes acceso a este juego.";
         guardCTA = (
           <Button
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
             onClick={() => router.push(`/juego/${gameId}`)}
+            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
           >
             Volver
           </Button>
@@ -170,10 +160,10 @@ export default function PlayEmbeddedPage() {
     }
   }
 
-  // === Mostrar GUARD en lugar del iframe ===
+  // ========== GUARD UI (modal/pantalla) ==========
   if (blocked) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white grid place-items-center px-4">
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-white px-4">
         <div className="px-6 py-5 bg-slate-800/70 border border-slate-700 rounded-xl max-w-md text-center space-y-4">
           <h1 className="text-xl font-bold text-orange-400">{title}</h1>
           <p className="text-slate-300">{guardMsg}</p>
@@ -183,8 +173,20 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // === Render del iframe cuando está permitido ===
-  const [now, setNow] = useState(() => Date.now());
+  // ========== SI LLEGA ACÁ → PUEDE JUGAR ==========
+  const qp: Record<string, string> = {};
+  if (email) qp.email = email;
+  if (gameId) qp.gid = gameId;
+
+  const qs =
+    embedUrl.includes("?")
+      ? "&" + new URLSearchParams(qp).toString()
+      : "?" + new URLSearchParams(qp).toString();
+
+  const finalSrc = embedUrl + qs;
+
+  // Alquiler countdown
+  const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -192,16 +194,6 @@ export default function PlayEmbeddedPage() {
 
   const expiresInMs =
     canPlay?.expiresAt != null ? Math.max(0, canPlay.expiresAt - now) : null;
-
-  const qp: Record<string, string> = {};
-  if (email) qp.email = email;
-  if (gameId) qp.gid = gameId;
-
-  const qs =
-    embedUrl.includes("?") ? "&" : "?" + new URLSearchParams(qp).toString();
-  const finalSrc = embedUrl + qs;
-
-  const showCountdown = typeof expiresInMs === "number";
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
@@ -221,11 +213,11 @@ export default function PlayEmbeddedPage() {
           </div>
         </div>
 
-        {showCountdown && (
+        {expiresInMs != null && (
           <div className="mb-3">
             <div className="inline-flex items-center gap-2 bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2">
               <span className="text-slate-300 text-sm">Tiempo restante del alquiler:</span>
-              <span className="text-orange-400 font-semibold">{msToClock(expiresInMs!)}</span>
+              <span className="text-orange-400 font-semibold">{msToClock(expiresInMs)}</span>
             </div>
           </div>
         )}
