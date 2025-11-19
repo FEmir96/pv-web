@@ -146,22 +146,56 @@ if (
   );
 }
 
-if (!gameId || game === undefined || canPlay === undefined) {
-  return <div className="min-h-[60vh] grid place-items-center text-slate-300">Cargando…</div>;
+// 🚫 Nunca permitimos que la UI avance mientras falten datos críticos
+const loadingHard =
+  status === "loading" ||
+  !email ||
+  profile === undefined ||
+  canPlay === undefined ||
+  game === undefined;
+
+if (loadingHard) {
+  return (
+    <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+      Cargando…
+    </div>
+  );
 }
 
+// 🚫 Si no hay juego o no es embebible, cortar aquí ANTES de montar iframe
+if (!game) {
+  return (
+    <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+      Juego no encontrado.
+    </div>
+  );
+}
 
-  if (!game) {
-    return <div className="min-h-[60vh] grid place-items-center text-slate-300">Juego no encontrado.</div>;
-  }
+if (!embedUrl) {
+  return (
+    <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
+      Este juego no tiene versión embebible.
+    </div>
+  );
+}
 
-  if (!embedUrl) {
-    return (
-      <div className="min-h-[60vh] grid place-items-center text-slate-300">
-        Este juego no tiene versión embebible.
+// 🚫 Corte duro: si NO está permitido, NI SIQUIERA se monta el iframe
+if (!isAdmin && !canPlay.canPlay) {
+  return (
+    <div className="min-h-screen bg-slate-900 text-white grid place-items-center">
+      <div className="px-6 py-4 bg-slate-800/70 rounded-xl border border-slate-700 text-center space-y-4 max-w-md">
+        <h1 className="text-xl font-bold text-red-400">{title}</h1>
+        <p className="text-slate-300">No tenés acceso a este juego.</p>
+        <Button
+          onClick={() => router.push(`/juego/${gameId}`)}
+          className="bg-red-500 hover:bg-red-600 text-white"
+        >
+          Volver
+        </Button>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
 
 
