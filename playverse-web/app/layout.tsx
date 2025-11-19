@@ -8,6 +8,7 @@ import { Header } from "@/components/header";
 import { ConditionalFooter } from "@/components/ConditionalFooter";
 import { Suspense } from "react";
 import OAuthToast from "@/components/OAuthToast";
+import ScoreBridge from "@/components/ScoreBridge";
 
 // Convex
 import ConvexProviderClient from "./providers/convex-provider";
@@ -42,9 +43,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <ConvexProviderClient>
           <SessionProviderClient>
+            {/* 🔥 ScoreBridge debe estar DENTRO del SessionProvider */}
+            <ScoreBridge />
+
             <HouseAdProvider>
               <SessionCleaner />
               <GameModeManager />
+
               <Suspense fallback={<div>Loading...</div>}>
                 <Header />
                 <OAuthToast />
@@ -55,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <ConditionalFooter />
                 </div>
               </Suspense>
+
               <Analytics />
               <Toaster />
             </HouseAdProvider>
