@@ -129,6 +129,7 @@ import type * as queries_passwordReset from "../queries/passwordReset.js";
 import type * as queries_scores_getMyBestByGame from "../queries/scores/getMyBestByGame.js";
 import type * as queries_scores_topByGame from "../queries/scores/topByGame.js";
 import type * as queries_searchGames from "../queries/searchGames.js";
+import type * as queries_users_ownsGame from "../queries/users/ownsGame.js";
 import type * as transactions from "../transactions.js";
 
 import type {
@@ -259,6 +260,7 @@ declare const fullApi: ApiFromModules<{
   "queries/scores/getMyBestByGame": typeof queries_scores_getMyBestByGame;
   "queries/scores/topByGame": typeof queries_scores_topByGame;
   "queries/searchGames": typeof queries_searchGames;
+  "queries/users/ownsGame": typeof queries_users_ownsGame;
   transactions: typeof transactions;
 }>;
 
