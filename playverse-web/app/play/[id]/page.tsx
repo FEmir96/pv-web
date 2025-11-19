@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
@@ -11,16 +11,20 @@ import type { Id } from "@convex/_generated/dataModel";
 import RankingButton from "@/components/RankingButton";
 import { Button } from "@/components/ui/button";
 
-// Convex refs CORRECTOS
+// --------------------------
+// CONVEX REFS
+// --------------------------
 const getGameByIdRef = api.queries.getGameById;
 const getUserByEmailRef = api.queries.getUserByEmail;
-const canPlayGameRef = api.queries.canPlayGame;
+const canPlayGameRef = api.queries.games.canPlayGame;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
   const params = useParams();
 
-  // Resolver ID de la URL
+  // --------------------------
+  // ID DE JUEGO
+  // --------------------------
   const gameId = useMemo(() => {
     const raw = params?.id;
     if (!raw) return null;
@@ -30,7 +34,11 @@ export default function PlayEmbeddedPage() {
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // Si no hay gameId → error inmediato
+  useEffect(() => {
+    console.log("🎮 [DEBUG FRONT] gameId →", gameId);
+    console.log("👤 [DEBUG FRONT] session email →", email);
+  }, [gameId, email]);
+
   if (!gameId) {
     return (
       <Blocked
@@ -42,7 +50,9 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Queries
+  // --------------------------
+  // QUERIES
+  // --------------------------
   const game = useQuery(getGameByIdRef, { id: gameId as Id<"games"> });
 
   const profile = useQuery(
@@ -57,7 +67,14 @@ export default function PlayEmbeddedPage() {
       : "skip"
   );
 
-  // Loading
+  // DEBUG
+  useEffect(() => console.log("🎮 [DEBUG FRONT] game →", game), [game]);
+  useEffect(() => console.log("👤 [DEBUG FRONT] profile →", profile), [profile]);
+  useEffect(() => console.log("🔐 [DEBUG FRONT] canPlay →", canPlay), [canPlay]);
+
+  // --------------------------
+  // LOADING STATE
+  // --------------------------
   if (!game || (email && !profile) || (email && !canPlay)) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-200">
@@ -69,7 +86,11 @@ export default function PlayEmbeddedPage() {
   const title = game?.title ?? "Juego";
   const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
 
-  // Usuario NO logueado
+  console.log("🌐 [DEBUG FRONT] embedUrl →", embedUrl);
+
+  // --------------------------
+  // NO LOGUEADO
+  // --------------------------
   if (!email) {
     return (
       <Blocked
@@ -81,7 +102,9 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Juego inexistente
+  // --------------------------
+  // JUEGO INEXISTENTE
+  // --------------------------
   if (!game) {
     return (
       <Blocked
@@ -93,7 +116,9 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // No tiene embed
+  // --------------------------
+  // NO EMBEBIBLE
+  // --------------------------
   if (!embedUrl) {
     return (
       <Blocked
@@ -105,14 +130,18 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Validación del backend
+  // --------------------------
+  // VALIDACIÓN DE ACCESO
+  // --------------------------
   if (!canPlay.canPlay) {
+    console.log("🚫 [DEBUG FRONT] canPlayGame bloqueó acceso. Razón:", canPlay.reason);
+
     let msg = "No tenés acceso a este juego.";
     let btn = "Volver";
     let href = `/juego/${gameId}`;
 
     if (canPlay.reason === "premium_required") {
-      msg = "Este juego requiere ser Premium.";
+      msg = "Este título es Premium.";
       btn = "Hacerse Premium";
       href = "/premium";
     }
@@ -124,7 +153,7 @@ export default function PlayEmbeddedPage() {
     }
 
     if (canPlay.reason === "rental_required") {
-      msg = "Tu alquiler venció o no tenés uno activo.";
+      msg = "Tu alquiler está vencido o no tenés uno activo.";
       btn = "Alquilar";
       href = `/checkout/alquiler/${gameId}`;
     }
@@ -139,16 +168,25 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Construcción de la URL final con email y gid
+  // --------------------------
+  // CONSTRUIR QUERYSTRING
+  // --------------------------
   const qsParams = new URLSearchParams({
     email: email ?? "",
     gid: gameId ?? "",
   }).toString();
 
+  console.log("🔗 [DEBUG FRONT] QueryString generado →", qsParams);
+
   const finalSrc = embedUrl.includes("?")
     ? `${embedUrl}&${qsParams}`
     : `${embedUrl}?${qsParams}`;
 
+  console.log("▶️ [DEBUG FRONT] iframe src FINAL →", finalSrc);
+
+  // --------------------------
+  // RENDER FRAME
+  // --------------------------
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="container mx-auto px-4 py-6">
@@ -186,8 +224,9 @@ export default function PlayEmbeddedPage() {
   );
 }
 
-/* ------------------------------ COMPONENTE BLOQUEADO ------------------------------ */
-
+// -------------------------------------------------------
+// COMPONENTE BLOQUEADO
+// -------------------------------------------------------
 function Blocked({
   title,
   text,
