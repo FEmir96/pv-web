@@ -6,25 +6,14 @@ import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
 
 import { api } from "@convex/_generated/api";
-import type { FunctionReference } from "convex/server";
 
 import type { Id } from "@convex/_generated/dataModel";
 import RankingButton from "@/components/RankingButton";
 import { Button } from "@/components/ui/button";
 
-const convexApi = api as any;
-const getGameByIdRef =
-  (convexApi?.queries?.getGameById ??
-    convexApi?.getGameById) as FunctionReference<"query">;
-const getUserByEmailRef =
-  (convexApi?.queries?.getUserByEmail ??
-    convexApi?.getUserByEmail) as FunctionReference<"query">;
-const canPlayGameRef =
-  (
-    convexApi?.queries?.games?.canPlayGame ??
-    convexApi?.games?.canPlayGame ??
-    convexApi?.["games/canPlayGame"]
-  ) as FunctionReference<"query">;
+const getGameByIdRef = api.queries.getGameById.getGameById as any;
+const getUserByEmailRef = api.queries.getUserByEmail.getUserByEmail as any;
+const canPlayGameRef = api.queries.games.canPlayGame as any;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
