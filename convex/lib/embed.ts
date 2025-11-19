@@ -4,6 +4,10 @@ import type { DatabaseReader, DatabaseWriter } from "../_generated/server";
 
 type DB = DatabaseReader | DatabaseWriter;
 
+function stripStaticPrefix(path: string): string {
+  return path.replace(/^\/static-games(\/|$)/, "/");
+}
+
 function normalizePath(raw?: string | null): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -11,12 +15,14 @@ function normalizePath(raw?: string | null): string | null {
   try {
     const u = new URL(trimmed, "https://placeholder.local");
     const path = u.pathname || "/";
-    return path.replace(/\/+$/, "") || "/";
+    const clean = path.replace(/\/+$/, "") || "/";
+    return stripStaticPrefix(clean) || clean;
   } catch {
     const noHash = trimmed.split("#")[0];
     const noQuery = noHash.split("?")[0];
     const prefixed = noQuery.startsWith("/") ? noQuery : `/${noQuery}`;
-    return prefixed.replace(/\/+$/, "") || "/";
+    const clean = prefixed.replace(/\/+$/, "") || "/";
+    return stripStaticPrefix(clean) || clean;
   }
 }
 
@@ -28,9 +34,12 @@ function candidates(raw?: string | null): string[] {
     if (!trimmed) return;
     const noTrailing = trimmed.replace(/\/+$/, "");
     const base = noTrailing || "/";
+    const withStrip = stripStaticPrefix(base) || base;
     set.add(base);
     set.add(`${base}/`);
     set.add(trimmed);
+    set.add(withStrip);
+    set.add(`${withStrip}/`);
   };
   push(raw);
   push(normalizePath(raw));
@@ -42,7 +51,8 @@ function normalizeStored(raw?: string | null): string | null {
   try {
     const u = new URL(raw, "https://placeholder.local");
     const path = u.pathname || "/";
-    return path.replace(/\/+$/, "") || "/";
+    const clean = path.replace(/\/+$/, "") || "/";
+    return stripStaticPrefix(clean) || clean;
   } catch {
     return normalizePath(raw);
   }
