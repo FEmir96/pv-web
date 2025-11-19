@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 
 const getGameByIdRef = api.queries.getGameById.getGameById as any;
 const getUserByEmailRef = api.queries.getUserByEmail.getUserByEmail as any;
-const canPlayGameRef = api.queries.games.canPlayGame as any;
+const canPlayGameRef = api.queries.canPlayGame.canPlayGame as any;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
