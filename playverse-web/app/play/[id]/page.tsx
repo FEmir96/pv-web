@@ -1,50 +1,34 @@
-// playverse-web/app/play/[id]/page.tsx
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery } from "convex/react";
-import type { FunctionReference } from "convex/server";
 import { api } from "@convex";
 import type { Id } from "@convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
 import RankingButton from "@/components/RankingButton";
-import { useAuthStore } from "@/lib/useAuthStore";
+import { Button } from "@/components/ui/button";
 
-const getGameByIdRef =
-  (api as any)["queries/getGameById"].getGameById as FunctionReference<"query">;
-
-const getUserByEmailRef =
-  (api as any)["queries/getUserByEmail"].getUserByEmail as FunctionReference<"query">;
-
-const canPlayGameRef =
-  (api as any)["queries/canPlayGame"].canPlayGame as FunctionReference<"query">;
-
-function msToClock(ms: number) {
-  if (ms <= 0) return "00:00:00";
-  const s = Math.floor(ms / 1000);
-  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
-  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
-}
+// Convex refs
+const getGameByIdRef = (api as any)["queries/getGameById"].getGameById;
+const getUserByEmailRef = (api as any)["queries/getUserByEmail"].getUserByEmail;
+const canPlayGameRef = (api as any)["queries/canPlayGame"].canPlayGame;
 
 export default function PlayEmbeddedPage() {
-  // ---------- PARAMS + ROUTER ----------
-  const params = useParams() as { id?: string | string[] };
-  const gameId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const router = useRouter();
+  const params = useParams();
 
-  // ---------- SESIÓN ----------
+  // ❗ GameID nunca cambia
+  const gameId = useMemo(() => {
+    const raw = (params?.id as string | string[] | undefined) ?? null;
+    return Array.isArray(raw) ? raw[0] : raw;
+  }, [params]);
+
+  // ❗ Sesión
   const { data: session } = useSession();
-  const localUser = useAuthStore((s) => s.user);
-  const email =
-    session?.user?.email?.toLowerCase() ||
-    localUser?.email?.toLowerCase() ||
-    null;
+  const email = session?.user?.email?.toLowerCase() ?? null;
 
-  // ---------- QUERIES (siempre arriba, nunca en condicional) ----------
+  // ❗ Queries SIN CONDICIONALES (React seguro)
   const game = useQuery(
     getGameByIdRef,
     gameId ? { id: gameId as Id<"games"> } : "skip"
@@ -62,148 +46,99 @@ export default function PlayEmbeddedPage() {
       : "skip"
   );
 
-  // ---------- CONTADORES (hooks siempre arriba) ----------
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  // ---------- LOADING SEGURO ----------
-  if (!game) {
+  // ❗ Si falta algo → pantalla de carga universal (simple & estable)
+  if (!game || (email && !profile) || (email && !canPlay)) {
     return (
-      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
-        Cargando juego…
+      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-200">
+        Cargando…
       </div>
     );
   }
 
-  if (email && profile === undefined) {
-    return (
-      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
-        Cargando perfil…
-      </div>
-    );
-  }
-
-  if (email && profile && canPlay === undefined) {
-    return (
-      <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
-        Verificando acceso…
-      </div>
-    );
-  }
-
-  // ---------- DATOS DEL JUEGO ----------
   const title = game?.title ?? "Juego";
   const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
-  const sandbox = game?.embed_sandbox ?? undefined;
-  const allow = game?.embed_allow ?? undefined;
 
-  // ---------- LÓGICA DE GUARD ----------
-  const blocked =
-    !email ||
-    !canPlay?.canPlay;
-
-  const expiresInMs =
-    canPlay?.expiresAt != null
-      ? Math.max(0, canPlay.expiresAt - now)
-      : null;
-
-  let guardMsg = "";
-  let guardCTA = null;
-
+  // ❗ Caso: no logueado
   if (!email) {
-    guardMsg = "Debes iniciar sesión para jugar este título.";
-    guardCTA = (
-      <Button
-        onClick={() => router.push(`/auth/login?next=/play/${gameId}`)}
-        className="bg-orange-400 text-slate-900 hover:bg-orange-500"
-      >
-        Iniciar sesión
-      </Button>
-    );
-  } else if (!canPlay?.canPlay) {
-    switch (canPlay.reason) {
-      case "premium_required":
-        guardMsg = "Este juego requiere ser Premium.";
-        guardCTA = (
-          <Button
-            onClick={() => router.push(`/premium`)}
-            className="bg-orange-400 text-slate-900 hover:bg-orange-500"
-          >
-            Hacerse Premium
-          </Button>
-        );
-        break;
-
-      case "purchase_required":
-        guardMsg = "Debes comprar este juego para jugarlo.";
-        guardCTA = (
-          <Button
-            onClick={() => router.push(`/checkout/compra/${gameId}`)}
-            className="bg-orange-400 text-slate-900 hover:bg-orange-500"
-          >
-            Comprar juego
-          </Button>
-        );
-        break;
-
-      case "rental_required":
-        guardMsg = "Tu alquiler está vencido o no tienes uno activo.";
-        guardCTA = (
-          <Button
-            onClick={() => router.push(`/checkout/alquiler/${gameId}`)}
-            className="bg-orange-400 text-slate-900 hover:bg-orange-500"
-          >
-            Alquilar juego
-          </Button>
-        );
-        break;
-
-      default:
-        guardMsg = "No tienes acceso a este juego.";
-        guardCTA = (
-          <Button
-            onClick={() => router.push(`/juego/${gameId}`)}
-            className="bg-orange-400 text-slate-900 hover:bg-orange-500"
-          >
-            Volver
-          </Button>
-        );
-    }
-  }
-
-  // ---------- UI DE BLOQUEO ----------
-  if (blocked) {
     return (
-      <div className="min-h-screen grid place-items-center bg-slate-900 text-white px-4">
-        <div className="bg-slate-800/70 border border-slate-700 p-6 rounded-xl max-w-md text-center space-y-4">
-          <h1 className="text-xl font-bold text-orange-400">{title}</h1>
-          <p className="text-slate-300">{guardMsg}</p>
-          {guardCTA}
-        </div>
-      </div>
+      <Blocked
+        title={title}
+        text="Debes iniciar sesión para jugar este título."
+        buttonText="Iniciar sesión"
+        onClick={() => router.push(`/auth/login?next=/play/${gameId}`)}
+      />
     );
   }
 
-  // ---------- SI LLEGA ACÁ → PUEDE JUGAR ----------
-  const qp: Record<string, string> = {};
-  if (email) qp.email = email;
-  if (gameId) qp.gid = gameId;
+  // ❗ Caso: juego no existe
+  if (!game) {
+    return (
+      <Blocked
+        title="Error"
+        text="Juego no encontrado."
+        buttonText="Volver"
+        onClick={() => router.push("/")}
+      />
+    );
+  }
 
+  // ❗ Caso: no embebible
+  if (!embedUrl) {
+    return (
+      <Blocked
+        title={title}
+        text="Este juego no tiene versión embebible."
+        buttonText="Volver"
+        onClick={() => router.push(`/juego/${gameId}`)}
+      />
+    );
+  }
+
+  // ❗ Caso: no tiene acceso
+  if (!canPlay.canPlay) {
+    let msg = "No tenés acceso a este juego.";
+    let btn = "Volver";
+    let href = `/juego/${gameId}`;
+
+    if (canPlay.reason === "premium_required") {
+      msg = "Este juego requiere ser Premium.";
+      btn = "Hacerse Premium";
+      href = "/premium";
+    }
+
+    if (canPlay.reason === "purchase_required") {
+      msg = "Debes comprar este juego.";
+      btn = "Comprar";
+      href = `/checkout/compra/${gameId}`;
+    }
+
+    if (canPlay.reason === "rental_required") {
+      msg = "Tu alquiler está vencido o no tienes uno activo.";
+      btn = "Alquilar";
+      href = `/checkout/alquiler/${gameId}`;
+    }
+
+    return (
+      <Blocked
+        title={title}
+        text={msg}
+        buttonText={btn}
+        onClick={() => router.push(href)}
+      />
+    );
+  }
+
+  // ❗ SI LLEGA ACÁ → EL USUARIO PUEDE JUGAR
   const qs =
     embedUrl.includes("?")
-      ? "&" + new URLSearchParams(qp).toString()
-      : "?" + new URLSearchParams(qp).toString();
+      ? "&" + new URLSearchParams({ email, gid: gameId! }).toString()
+      : "?" + new URLSearchParams({ email, gid: gameId! }).toString();
 
   const finalSrc = embedUrl + qs;
 
-  // ---------- PLAYER ----------
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="container mx-auto px-4 py-6">
-        
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl md:text-2xl font-bold text-orange-400">{title}</h1>
 
@@ -219,33 +154,44 @@ export default function PlayEmbeddedPage() {
           </div>
         </div>
 
-        {expiresInMs != null && (
-          <div className="mb-3">
-            <div className="inline-flex items-center gap-2 bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2">
-              <span className="text-slate-300 text-sm">Tiempo restante del alquiler:</span>
-              <span className="text-orange-400 font-semibold">{msToClock(expiresInMs)}</span>
-            </div>
-          </div>
-        )}
-
         <div className="relative aspect-video bg-slate-800 rounded-lg overflow-hidden">
           <iframe
             src={finalSrc}
-            title={title}
             className="w-full h-full"
-            allow={
-              allow ??
-              "autoplay; fullscreen; gamepad; clipboard-read; clipboard-write; cross-origin-isolated"
-            }
-            sandbox={sandbox}
+            title={title}
+            allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write;"
             referrerPolicy="no-referrer"
             allowFullScreen
           />
         </div>
 
         <p className="mt-3 text-xs text-slate-500">
-          Si el juego no carga, revisá bloqueadores de anuncios o probá en una pestaña nueva.
+          Si el juego no carga, probá en una pestaña nueva.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function Blocked({
+  title,
+  text,
+  buttonText,
+  onClick,
+}: {
+  title: string;
+  text: string;
+  buttonText: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-slate-900 text-white grid place-items-center px-4">
+      <div className="p-6 bg-slate-800/70 border border-slate-700 rounded-xl text-center max-w-md">
+        <h1 className="text-xl font-bold text-red-400 mb-2">{title}</h1>
+        <p className="text-slate-300 mb-4">{text}</p>
+        <Button onClick={onClick} className="bg-red-500 hover:bg-red-600 text-white">
+          {buttonText}
+        </Button>
       </div>
     </div>
   );
