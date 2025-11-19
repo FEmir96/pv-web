@@ -36,6 +36,7 @@ import type * as games from "../games.js";
 import type * as lib_avatars from "../lib/avatars.js";
 import type * as lib_diffGame from "../lib/diffGame.js";
 import type * as lib_emailTemplates from "../lib/emailTemplates.js";
+import type * as lib_embed from "../lib/embed.js";
 import type * as lib_gameCore from "../lib/gameCore.js";
 import type * as lib_hash from "../lib/hash.js";
 import type * as lib_igdb_ageRatings from "../lib/igdb/ageRatings.js";
@@ -165,6 +166,7 @@ declare const fullApi: ApiFromModules<{
   "lib/avatars": typeof lib_avatars;
   "lib/diffGame": typeof lib_diffGame;
   "lib/emailTemplates": typeof lib_emailTemplates;
+  "lib/embed": typeof lib_embed;
   "lib/gameCore": typeof lib_gameCore;
   "lib/hash": typeof lib_hash;
   "lib/igdb/ageRatings": typeof lib_igdb_ageRatings;
