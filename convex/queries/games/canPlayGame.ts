@@ -7,6 +7,8 @@ export const canPlayGame = query({
     gameId: v.id("games"),
   },
   handler: async (ctx, { userId, gameId }) => {
+    console.log("🔥 Ejecutando canPlayGame v5", { userId, gameId });
+
     const game = await ctx.db.get(gameId);
     if (!game) {
       return { canPlay: false, reason: "not_found", expiresAt: null };
@@ -19,6 +21,12 @@ export const canPlayGame = query({
     const profile = await ctx.db.get(userId);
     const role = profile?.role ?? "free";
 
+    // Admin siempre puede
+    if (role === "admin") {
+      return { canPlay: true, reason: null, expiresAt: null };
+    }
+
+    // Transacciones del usuario
     const now = Date.now();
     const txs = await ctx.db
       .query("transactions")
@@ -46,29 +54,42 @@ export const canPlayGame = query({
 
     const owns = hasPurchase || !!activeRental;
 
-    // 1) Juegos FREE: pasan sin validar
-    if (game.plan === "free") {
-      return { canPlay: true, reason: null, expiresAt: null };
-    }
-
-    // 2) Si es Premium y el usuario también → pasa
-    if (game.plan === "premium" && role === "premium") {
-      return { canPlay: true, reason: null, expiresAt: null };
-    }
-
-    // 3) Juegos de compra/alquiler: validar biblioteca
-    if (!owns) {
-      if (expiredRental) {
-        return { canPlay: false, reason: "rental_required", expiresAt: null };
+    // ----------------------------------------------
+    // 🔥 OPCIÓN B (LA CORRECTA)
+    // PREMIUM siempre requiere compra/alquiler
+    // ----------------------------------------------
+    if (game.plan === "premium") {
+      if (!owns) {
+        if (expiredRental) {
+          return { canPlay: false, reason: "rental_required", expiresAt: null };
+        }
+        return { canPlay: false, reason: "purchase_required", expiresAt: null };
       }
-      return { canPlay: false, reason: "purchase_required", expiresAt: null };
+
+      // Tiene compra o alquiler activo → puede jugar
+      return {
+        canPlay: true,
+        reason: null,
+        expiresAt: activeRental?.expiresAt ?? null,
+      };
     }
 
-    // 4) Si llegó hasta acá → tiene acceso
+    // ----------------------------------------------
+    // FREEWARE — basta con estar logueado
+    // ----------------------------------------------
+    if (game.plan === "free") {
+      return {
+        canPlay: true,
+        reason: null,
+        expiresAt: null,
+      };
+    }
+
+    // Seguridad → fallback
     return {
-      canPlay: true,
-      reason: null,
-      expiresAt: activeRental?.expiresAt ?? null,
+      canPlay: false,
+      reason: "unknown_plan",
+      expiresAt: null,
     };
   },
 });

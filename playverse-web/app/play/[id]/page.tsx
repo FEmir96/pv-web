@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 // Convex refs
 const getGameByIdRef = api.queries.getGameById.getGameById;
 const getUserByEmailRef = api.queries.getUserByEmail.getUserByEmail;
-const canPlayGameRef = api.queries.games.canPlayGame.canPlayGame;
+const canPlayGameRef = api.queries.canPlayGame.canPlayGame;
 
 export default function PlayEmbeddedPage() {
   const router = useRouter();
