@@ -14,8 +14,10 @@ import { useAuthStore } from "@/lib/useAuthStore";
 
 const getGameByIdRef =
   (api as any)["queries/getGameById"].getGameById as FunctionReference<"query">;
+
 const getUserByEmailRef =
   (api as any)["queries/getUserByEmail"].getUserByEmail as FunctionReference<"query">;
+
 const canPlayGameRef =
   (api as any)["queries/canPlayGame"].canPlayGame as FunctionReference<"query">;
 
@@ -29,10 +31,12 @@ function msToClock(ms: number) {
 }
 
 export default function PlayEmbeddedPage() {
+  // ---------- PARAMS + ROUTER ----------
   const params = useParams() as { id?: string | string[] };
   const gameId = Array.isArray(params?.id) ? params.id[0] : params?.id;
-
   const router = useRouter();
+
+  // ---------- SESIÓN ----------
   const { data: session } = useSession();
   const localUser = useAuthStore((s) => s.user);
   const email =
@@ -40,19 +44,17 @@ export default function PlayEmbeddedPage() {
     localUser?.email?.toLowerCase() ||
     null;
 
-  //-- 1) Query juego: siempre se ejecuta
+  // ---------- QUERIES (siempre arriba, nunca en condicional) ----------
   const game = useQuery(
     getGameByIdRef,
     gameId ? { id: gameId as Id<"games"> } : "skip"
   );
 
-  //-- 2) Perfil: solo si hay email
   const profile = useQuery(
     getUserByEmailRef,
     email ? { email } : "skip"
   );
 
-  //-- 3) canPlay: solo si email, profile y juego están listos
   const canPlay = useQuery(
     canPlayGameRef,
     email && profile?._id && gameId
@@ -60,8 +62,14 @@ export default function PlayEmbeddedPage() {
       : "skip"
   );
 
-  // ========== LOADING CONTROL INTELIGENTE ==========
-  // Si no hay email → no es loading → se muestra guard más abajo
+  // ---------- CONTADORES (hooks siempre arriba) ----------
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // ---------- LOADING SEGURO ----------
   if (!game) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
@@ -70,7 +78,6 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Si hay email pero profile está cargando
   if (email && profile === undefined) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
@@ -79,7 +86,6 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // Si hay email + profile pero todavía no vino canPlay
   if (email && profile && canPlay === undefined) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-slate-300">
@@ -88,17 +94,22 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // ========== ANÁLISIS DE ACCESO ==========
-  const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
+  // ---------- DATOS DEL JUEGO ----------
   const title = game?.title ?? "Juego";
+  const embedUrl = game?.embed_url ?? game?.embedUrl ?? null;
   const sandbox = game?.embed_sandbox ?? undefined;
   const allow = game?.embed_allow ?? undefined;
 
+  // ---------- LÓGICA DE GUARD ----------
   const blocked =
-    !email ||                 // no logueado
-    !canPlay?.canPlay;        // no tiene permiso
+    !email ||
+    !canPlay?.canPlay;
 
-  // Mensaje + CTA según el motivo
+  const expiresInMs =
+    canPlay?.expiresAt != null
+      ? Math.max(0, canPlay.expiresAt - now)
+      : null;
+
   let guardMsg = "";
   let guardCTA = null;
 
@@ -107,52 +118,55 @@ export default function PlayEmbeddedPage() {
     guardCTA = (
       <Button
         onClick={() => router.push(`/auth/login?next=/play/${gameId}`)}
-        className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+        className="bg-orange-400 text-slate-900 hover:bg-orange-500"
       >
         Iniciar sesión
       </Button>
     );
   } else if (!canPlay?.canPlay) {
-    switch (canPlay?.reason) {
-      case "purchase_required":
-        guardMsg = "Debes comprar este juego para jugarlo.";
-        guardCTA = (
-          <Button
-            onClick={() => router.push(`/checkout/compra/${gameId}`)}
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
-          >
-            Comprar juego
-          </Button>
-        );
-        break;
-      case "rental_required":
-        guardMsg = "Tu alquiler está vencido o no tienes uno activo.";
-        guardCTA = (
-          <Button
-            onClick={() => router.push(`/checkout/alquiler/${gameId}`)}
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
-          >
-            Alquilar juego
-          </Button>
-        );
-        break;
+    switch (canPlay.reason) {
       case "premium_required":
-        guardMsg = "Este juego requiere suscripción Premium.";
+        guardMsg = "Este juego requiere ser Premium.";
         guardCTA = (
           <Button
             onClick={() => router.push(`/premium`)}
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+            className="bg-orange-400 text-slate-900 hover:bg-orange-500"
           >
             Hacerse Premium
           </Button>
         );
         break;
+
+      case "purchase_required":
+        guardMsg = "Debes comprar este juego para jugarlo.";
+        guardCTA = (
+          <Button
+            onClick={() => router.push(`/checkout/compra/${gameId}`)}
+            className="bg-orange-400 text-slate-900 hover:bg-orange-500"
+          >
+            Comprar juego
+          </Button>
+        );
+        break;
+
+      case "rental_required":
+        guardMsg = "Tu alquiler está vencido o no tienes uno activo.";
+        guardCTA = (
+          <Button
+            onClick={() => router.push(`/checkout/alquiler/${gameId}`)}
+            className="bg-orange-400 text-slate-900 hover:bg-orange-500"
+          >
+            Alquilar juego
+          </Button>
+        );
+        break;
+
       default:
         guardMsg = "No tienes acceso a este juego.";
         guardCTA = (
           <Button
             onClick={() => router.push(`/juego/${gameId}`)}
-            className="bg-orange-400 hover:bg-orange-500 text-slate-900"
+            className="bg-orange-400 text-slate-900 hover:bg-orange-500"
           >
             Volver
           </Button>
@@ -160,11 +174,11 @@ export default function PlayEmbeddedPage() {
     }
   }
 
-  // ========== GUARD UI (modal/pantalla) ==========
+  // ---------- UI DE BLOQUEO ----------
   if (blocked) {
     return (
       <div className="min-h-screen grid place-items-center bg-slate-900 text-white px-4">
-        <div className="px-6 py-5 bg-slate-800/70 border border-slate-700 rounded-xl max-w-md text-center space-y-4">
+        <div className="bg-slate-800/70 border border-slate-700 p-6 rounded-xl max-w-md text-center space-y-4">
           <h1 className="text-xl font-bold text-orange-400">{title}</h1>
           <p className="text-slate-300">{guardMsg}</p>
           {guardCTA}
@@ -173,7 +187,7 @@ export default function PlayEmbeddedPage() {
     );
   }
 
-  // ========== SI LLEGA ACÁ → PUEDE JUGAR ==========
+  // ---------- SI LLEGA ACÁ → PUEDE JUGAR ----------
   const qp: Record<string, string> = {};
   if (email) qp.email = email;
   if (gameId) qp.gid = gameId;
@@ -185,19 +199,11 @@ export default function PlayEmbeddedPage() {
 
   const finalSrc = embedUrl + qs;
 
-  // Alquiler countdown
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const expiresInMs =
-    canPlay?.expiresAt != null ? Math.max(0, canPlay.expiresAt - now) : null;
-
+  // ---------- PLAYER ----------
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="container mx-auto px-4 py-6">
+        
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl md:text-2xl font-bold text-orange-400">{title}</h1>
 
