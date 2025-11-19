@@ -1,5 +1,4 @@
-// convex/queries/canPlayGame.ts
-import { query } from "../_generated/server";            // ajusta la ruta si tu árbol es distinto
+import { query } from "../_generated/server";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 
@@ -14,21 +13,20 @@ export const canPlayGame = query({
       return { canPlay: false, reason: "not_found" as const, expiresAt: null as number | null };
     }
 
-    // Requiere login para evaluar (y para free embebidos pedimos login también)
+    // Requiere login para evaluar
     if (!userId) {
       return { canPlay: false, reason: "login" as const, expiresAt: null };
     }
 
-    // Perfil (para ver rol)
+    // Perfil (para rol)
     const profile = await ctx.db.get(userId);
     const role = (profile as any)?.role as "free" | "premium" | "admin" | undefined;
 
-    // ✅ BYPASS ADMIN: siempre permitido
+    // Admin siempre permitido
     if (role === "admin") {
       return { canPlay: true, reason: null, expiresAt: null };
     }
 
-    // Propiedad / alquiler
     const now = Date.now();
     const userTx = await ctx.db
       .query("transactions")
@@ -45,21 +43,37 @@ export const canPlayGame = query({
     );
     const hasRental = !!activeRental;
 
-    // Plan free: si hay login, permitimos (aunque no exista transacción)
-    if ((game as any).plan === "free") {
-      return { canPlay: true, reason: null, expiresAt: null };
-    }
+    const expiredRental = userTx.find(
+      (t) =>
+        t.gameId === gameId &&
+        t.type === "rental" &&
+        typeof t.expiresAt === "number" &&
+        t.expiresAt <= now
+    );
 
-    // Plan premium: necesita compra o alquiler vigente
+    const ownsGame = hasPurchase || hasRental;
+
+    // Premium: requiere rol premium + compra o alquiler vigente
     if ((game as any).plan === "premium") {
-      if (hasPurchase || hasRental) {
+      if (role !== "premium") {
+        return { canPlay: false, reason: "premium_required" as const, expiresAt: null };
+      }
+      if (ownsGame) {
         return { canPlay: true, reason: null, expiresAt: activeRental?.expiresAt ?? null };
       }
-      // sin compra/alquiler
-      return { canPlay: false, reason: "premium_required" as const, expiresAt: null };
+      if (expiredRental) {
+        return { canPlay: false, reason: "rental_required" as const, expiresAt: null };
+      }
+      return { canPlay: false, reason: "purchase_required" as const, expiresAt: null };
     }
 
-    // Fallback conservador
-    return { canPlay: false, reason: "unknown" as const, expiresAt: null };
+    // Free: también necesita estar en biblioteca (compra o alquiler vigente)
+    if (ownsGame) {
+      return { canPlay: true, reason: null, expiresAt: activeRental?.expiresAt ?? null };
+    }
+    if (expiredRental) {
+      return { canPlay: false, reason: "rental_required" as const, expiresAt: null };
+    }
+    return { canPlay: false, reason: "purchase_required" as const, expiresAt: null };
   },
 });

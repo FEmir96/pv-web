@@ -10,9 +10,7 @@ import { api } from "@convex";
 import type { Id } from "@convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/useAuthStore";
-import { useHouseAds } from "@/app/providers/HouseAdProvider"; // ⬅️ NUEVO
-
-// ✅ nuevo: botón Ranking
+import { useHouseAds } from "@/app/providers/HouseAdProvider";
 import RankingButton from "@/components/RankingButton";
 
 const getGameByIdRef =
@@ -41,7 +39,7 @@ export default function PlayEmbeddedPage() {
   );
   const router = useRouter();
 
-  // Sesión + store local
+  // Sesion + store local
   const { data: session } = useSession();
   const localUser = useAuthStore((s) => s.user);
   const email =
@@ -55,7 +53,6 @@ export default function PlayEmbeddedPage() {
   ) as { _id: Id<"profiles">; role?: "free" | "premium" | "admin" } | null | undefined;
 
   const isAdmin = profile?.role === "admin";
-  const isPremiumSub = profile?.role === "premium";
 
   const game = useQuery(
     getGameByIdRef,
@@ -81,36 +78,27 @@ export default function PlayEmbeddedPage() {
 
   const isEmbeddable = typeof embedUrl === "string" && embedUrl.trim().length > 0;
   const plan = (game as any)?.plan as "free" | "premium" | undefined;
-  const isFreePlan = plan === "free";
-  const isPremiumPlan = plan === "premium";
 
-  // ⏱ contador alquiler (si aplica)
+  // Contador alquiler (si aplica)
   const expiresInMs = useMemo(() => {
     if (isAdmin) return null;
     if (!canPlay?.expiresAt) return null;
     return Math.max(0, canPlay.expiresAt - now);
   }, [canPlay?.expiresAt, now, isAdmin]);
 
-  // ✅ OVERRIDE local: embebidos
-  const premiumOverrideAllowed =
-    isEmbeddable &&
-    !!email &&
-    (isFreePlan || (isPremiumPlan && (isPremiumSub || isAdmin)));
-
-  // Guard de login cuando corresponde (sin romper canPlay)
+  // Guard de login cuando corresponde
   useEffect(() => {
-    if (isAdmin || premiumOverrideAllowed) return;
     if (canPlay === undefined) return;
-    if (canPlay?.canPlay) return;
+    if (canPlay?.canPlay || isAdmin) return;
     if (canPlay?.reason === "login" || !email) {
       const next = `/play/${gameId}`;
       router.replace(`/auth/login?next=${encodeURIComponent(next)}`);
     }
-  }, [canPlay, router, gameId, isAdmin, premiumOverrideAllowed, email]);
+  }, [canPlay, router, gameId, isAdmin, email]);
 
-  // CTA según motivo (admin u override premium/free → sin CTA)
+  // CTA segun motivo
   const action = useMemo(() => {
-    if (isAdmin || premiumOverrideAllowed) return null;
+    if (isAdmin) return null;
     const reason = canPlay?.reason;
     if (!reason) return null;
     if (reason === "premium_required") {
@@ -123,20 +111,18 @@ export default function PlayEmbeddedPage() {
       return { label: "Alquilar juego", href: `/checkout/alquiler/${gameId}` };
     }
     return null;
-  }, [canPlay?.reason, gameId, isAdmin, premiumOverrideAllowed]);
+  }, [canPlay?.reason, gameId, isAdmin]);
 
-  // ---------- NUEVO: pre-roll al entrar directo a /play/[id] (solo plan free) ----------
+  // Pre-roll al entrar directo a /play/[id] (solo plan free)
   const { gateOnPlayPageMount } = useHouseAds();
   useEffect(() => {
     if (!gameId) return;
     if (!game) return; // esperar a tener el juego
-    const plan = (game as any)?.plan;
     if (plan === "free") {
       // El provider valida role === "free" y aplica TTL para que no dispare en bucle.
       gateOnPlayPageMount(gameId);
     }
-  }, [gameId, game, gateOnPlayPageMount]);
-  // -------------------------------------------------------------------------------------
+  }, [gameId, game, plan, gateOnPlayPageMount]);
 
   // Loading / sin datos
   if (!gameId || game === undefined || canPlay === undefined) {
@@ -148,15 +134,15 @@ export default function PlayEmbeddedPage() {
   if (!embedUrl) {
     return (
       <div className="min-h-[60vh] grid place-items-center text-slate-300">
-        Este juego no tiene versión embebible.
+        Este juego no tiene version embebible.
       </div>
     );
   }
 
   // Acceso final
-  const allowed = isAdmin || premiumOverrideAllowed || !!canPlay?.canPlay;
+  const allowed = isAdmin || !!canPlay?.canPlay;
 
-  // No permitido → pantalla con CTA
+  // No permitido -> pantalla con CTA
   if (!allowed) {
     return (
       <div className="min-h-screen bg-slate-900 text-white">
@@ -174,7 +160,7 @@ export default function PlayEmbeddedPage() {
 
           <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-6">
             <p className="text-slate-300 mb-4">
-              No tenés acceso para jugar este título desde el sitio.
+              No tenes acceso para jugar este titulo desde el sitio.
             </p>
             {action && (
               <Button
@@ -250,7 +236,7 @@ export default function PlayEmbeddedPage() {
           {expiresInMs === 0 && (
             <div className="absolute inset-0 z-20 grid place-items-center bg-slate-900/80 backdrop-blur-sm">
               <div className="text-center space-y-3">
-                <p className="text-slate-300">Tu alquiler venció.</p>
+                <p className="text-slate-300">Tu alquiler vencio.</p>
                 <Button
                   onClick={() => router.push(`/checkout/extender/${gameId}`)}
                   className="bg-orange-400 hover:bg-orange-500 text-slate-900"
@@ -274,7 +260,7 @@ export default function PlayEmbeddedPage() {
 
         {/* Ayudas de compatibilidad */}
         <p className="mt-3 text-xs text-slate-500">
-          Si el juego no carga, revisá bloqueadores de anuncios o probá en una pestaña nueva.
+          Si el juego no carga, revisa bloqueadores de anuncios o proba en una pestaña nueva.
         </p>
       </div>
     </div>
