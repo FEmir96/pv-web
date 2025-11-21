@@ -94,16 +94,15 @@ export default function HouseAdProvider({ children }: { children: React.ReactNod
   }, [session?.user?.email, session?.user, convex]);
 
   // Cooldown onLogin (0ms en localhost, 10min en otros)
-  function canShowOnLoginNow(u: string): { ok: boolean; key: string } {
-    if (typeof window === "undefined") return { ok: false, key: "" };
-    const key = `pv_house_onLogin_last_${u}`;
-    const last = Number(localStorage.getItem(key) || 0);
-    const isLocal =
-      location.hostname === "localhost" || location.hostname.startsWith("127.");
-    const COOLDOWN = isLocal ? 0 : 10 * 60 * 1000;
-    const ok = Date.now() - last >= COOLDOWN;
-    return { ok, key };
-  }
+function canShowOnLoginNow(u: string): { ok: boolean; key: string } {
+  if (typeof window === "undefined") return { ok: false, key: "" };
+  const key = `pv_house_onLogin_last_${u}`;
+  const last = Number(localStorage.getItem(key) || 0);
+  // Queremos mostrar el anuncio en cada login (sin cooldown) incluso si el usuario cierra sesión y vuelve a entrar.
+  const COOLDOWN = 0;
+  const ok = Date.now() - last >= COOLDOWN;
+  return { ok, key };
+}
 
   // ON LOGIN → si role free y cooldown ok, pedimos anuncio
   useEffect(() => {

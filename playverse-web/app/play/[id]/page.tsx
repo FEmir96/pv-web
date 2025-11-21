@@ -10,6 +10,7 @@ import type { FunctionReference } from "convex/server";
 import type { Id } from "@convex/_generated/dataModel";
 import RankingButton from "@/components/RankingButton";
 import { Button } from "@/components/ui/button";
+import { useHouseAds } from "@/app/providers/HouseAdProvider";
 
 const convexApi = api as Record<string, any>;
 
@@ -43,11 +44,17 @@ export default function PlayEmbeddedPage() {
 
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? null;
+  const { gateOnPlayPageMount } = useHouseAds();
 
   useEffect(() => {
     console.debug("[PLAY] gameId", gameId);
     console.debug("[PLAY] session email", email);
   }, [gameId, email]);
+
+  useEffect(() => {
+    if (!gameId) return;
+    gateOnPlayPageMount(String(gameId));
+  }, [gameId, gateOnPlayPageMount]);
 
   const game = useQuery(
     getGameByIdRef,

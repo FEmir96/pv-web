@@ -1,7 +1,7 @@
 // playverse-web/app/juego/[id]/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -32,6 +32,8 @@ import type { Doc, Id } from "@convex/_generated/dataModel";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 import { useFavoritesStore } from "@/components/favoritesStore";
+import { useHouseAds } from "@/app/providers/HouseAdProvider";
+import PrePlayGate from "./_PrePlayGate";
 
 type MediaItem = { type: "image" | "video"; src: string; thumb?: string };
 
@@ -225,6 +227,7 @@ export default function GameDetailPage() {
   const params = useParams() as { id?: string | string[] } | null;
   const router = useRouter();
   const { toast } = useToast();
+  const { showPrePlayAd } = useHouseAds();
 
   // UI state
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -435,6 +438,15 @@ export default function GameDetailPage() {
   const canPlayEffective =
     canPlayBySubscription || hasPurchased || hasActiveRental;
 
+  const runPrePlayAd = useCallback(async () => {
+    if (!game?._id) return;
+    try {
+      await showPrePlayAd({ gameId: String(game._id) });
+    } catch {
+      // Si falla el ad, no bloqueamos el flujo de juego
+    }
+  }, [showPrePlayAd, game?._id]);
+
   const canExtend = !hasPurchased && hasActiveRental;
   const requiresPremium =
     isPremiumPlan && profile && profile.role !== "premium" && profile.role !== "admin";
@@ -616,9 +628,17 @@ export default function GameDetailPage() {
     router.push(`/checkout/extender/${game._id}`);
   };
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
     if (!game?._id) return;
     const playUrl = `/play/${game._id}`;
+    const launchPlay = async () => {
+      await runPrePlayAd();
+      if (isEmbeddable) {
+        router.push(playUrl);
+      } else {
+        toast({ title: "Lanzando juego", description: "Feliz gaming!" });
+      }
+    };
 
     // Enforce login for any play action first.
     if (!isLogged) {
@@ -628,11 +648,7 @@ export default function GameDetailPage() {
 
     // Admin bypass: siempre puede jugar cualquier juego
     if (isAdmin) {
-      if (isEmbeddable) {
-        router.push(playUrl);
-      } else {
-        toast({ title: "Lanzando juego", description: "Feliz gaming!" });
-      }
+      await launchPlay();
       return;
     }
 
@@ -640,11 +656,7 @@ export default function GameDetailPage() {
     if (isPremiumPlan) {
       if (isPremiumSub || hasPurchased || hasActiveRental) {
         // Allowed to play
-        if (isEmbeddable) {
-          router.push(playUrl);
-        } else {
-          toast({ title: "Lanzando juego", description: "Feliz gaming!" });
-        }
+        await launchPlay();
         return;
       }
       setShowPremiumModal(true);
@@ -653,12 +665,7 @@ export default function GameDetailPage() {
 
     // For free games or owned/rented paid games -> allow play
     if (isFreeToPlay || canPlayEffective) {
-      if (isEmbeddable) {
-        router.push(playUrl);
-      } else {
-        // Non-embeddable: keep current UX of showing a launching toast
-        toast({ title: "Lanzando juego", description: "Feliz gaming!" });
-      }
+      await launchPlay();
       return;
     }
 
@@ -778,9 +785,10 @@ const onToggleFavorite = async () => {
     return isPremiumPlan && isLogged && !isPremiumSub && !isAdmin;
   };
 
-  /* ======================= RENDER ======================= */
+/* ======================= RENDER ======================= */
   return (
     <div className="min-h-screen bg-slate-900 text-white">
+      <PrePlayGate gameId={String(game?._id ?? "")} />
       <div className="container mx-auto px-4 py-8">
         {!hasId && <div className="p-6 text-slate-300">Juego no encontrado.</div>}
         {hasId && isLoading && <div className="p-6 text-slate-300">Cargando⬦</div>}
