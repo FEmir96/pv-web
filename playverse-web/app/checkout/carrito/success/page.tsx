@@ -16,21 +16,36 @@ type CartPayload = {
   items: CartItem[];
   amount: number;
   currency: string;
+  savedAt?: number;
 };
+
+const STORAGE_KEY = "pv_cart_success";
+const PAYLOAD_TTL_MS = 1000 * 60 * 30; // 30 minutes
 
 export default function CartSuccessPage() {
   const [payload, setPayload] = useState<CartPayload | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
-      const raw = typeof window !== "undefined" ? sessionStorage.getItem("pv_cart_success") : null;
-      if (raw) {
-        const p = JSON.parse(raw) as CartPayload;
-        setPayload(p);
-        sessionStorage.removeItem("pv_cart_success");
+      if (typeof window !== "undefined") {
+        const raw = sessionStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as CartPayload;
+          const savedAt = parsed.savedAt ?? Date.now();
+
+          if (Date.now() - savedAt <= PAYLOAD_TTL_MS) {
+            setPayload(parsed);
+          }
+
+          sessionStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(STORAGE_KEY);
+        }
       }
     } catch {
       setPayload(null);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -50,7 +65,9 @@ export default function CartSuccessPage() {
 
           <h1 className="text-2xl font-bold text-white mb-4">¡Compra confirmada!</h1>
 
-          {payload ? (
+          {loading ? (
+            <div className="text-slate-300 mb-6">Recuperando los detalles de tu compra...</div>
+          ) : payload ? (
             <div className="mb-6 text-left">
               <div className="grid gap-3">
                 {payload.items.map((it) => (

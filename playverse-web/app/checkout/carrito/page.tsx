@@ -221,9 +221,12 @@ export default function CartCheckoutPage() {
           })),
           amount: subtotal,
           currency: "USD",
+          savedAt: Date.now(),
         };
         if (typeof window !== "undefined") {
-          sessionStorage.setItem("pv_cart_success", JSON.stringify(payload));
+          const serialized = JSON.stringify(payload);
+          sessionStorage.setItem("pv_cart_success", serialized);
+          localStorage.setItem("pv_cart_success", serialized);
         }
       } catch (e) {
         // ignore
