@@ -33,7 +33,6 @@ import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 import { useFavoritesStore } from "@/components/favoritesStore";
 import { useHouseAds } from "@/app/providers/HouseAdProvider";
-import PrePlayGate from "./_PrePlayGate";
 
 type MediaItem = { type: "image" | "video"; src: string; thumb?: string };
 
@@ -439,13 +438,13 @@ export default function GameDetailPage() {
     canPlayBySubscription || hasPurchased || hasActiveRental;
 
   const runPrePlayAd = useCallback(async () => {
-    if (!game?._id) return;
+    if (!game?._id || !isEmbeddable) return;
     try {
       await showPrePlayAd({ gameId: String(game._id) });
     } catch {
       // Si falla el ad, no bloqueamos el flujo de juego
     }
-  }, [showPrePlayAd, game?._id]);
+  }, [showPrePlayAd, game?._id, isEmbeddable]);
 
   const canExtend = !hasPurchased && hasActiveRental;
   const requiresPremium =
@@ -788,7 +787,6 @@ const onToggleFavorite = async () => {
 /* ======================= RENDER ======================= */
   return (
     <div className="min-h-screen bg-slate-900 text-white">
-      <PrePlayGate gameId={String(game?._id ?? "")} />
       <div className="container mx-auto px-4 py-8">
         {!hasId && <div className="p-6 text-slate-300">Juego no encontrado.</div>}
         {hasId && isLoading && <div className="p-6 text-slate-300">Cargando⬦</div>}
