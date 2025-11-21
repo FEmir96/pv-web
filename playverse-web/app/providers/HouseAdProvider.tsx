@@ -182,15 +182,6 @@ function canShowOnLoginNow(u: string): { ok: boolean; key: string } {
     async (gameId: string) => {
       if (!userId || role !== "free" || !gameId) return;
 
-      // TTL para evitar doble pre-roll al volver/reenviar
-      const KEY = `pv_preplay_gate_${gameId}`;
-      const last = Number(sessionStorage.getItem(KEY) || 0);
-      const TTL = 2 * 60 * 1000; // 2 minutos
-      if (Date.now() - last < TTL) {
-        log("gate: recently shown, skip");
-        return;
-      }
-
       try {
         const res = (await convex.query(api.ads.getOneForSlot as any, {
           userId,
@@ -210,8 +201,6 @@ function canShowOnLoginNow(u: string): { ok: boolean; key: string } {
           resolveRef.current = resolve;
           setOpen(true);
         });
-
-        sessionStorage.setItem(KEY, String(Date.now()));
       } catch (e) {
         log("gate prePlay error", e);
       }

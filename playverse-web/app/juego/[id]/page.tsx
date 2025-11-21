@@ -1,7 +1,7 @@
 // playverse-web/app/juego/[id]/page.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -32,7 +32,6 @@ import type { Doc, Id } from "@convex/_generated/dataModel";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 import { useFavoritesStore } from "@/components/favoritesStore";
-import { useHouseAds } from "@/app/providers/HouseAdProvider";
 
 type MediaItem = { type: "image" | "video"; src: string; thumb?: string };
 
@@ -226,7 +225,6 @@ export default function GameDetailPage() {
   const params = useParams() as { id?: string | string[] } | null;
   const router = useRouter();
   const { toast } = useToast();
-  const { showPrePlayAd } = useHouseAds();
 
   // UI state
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -437,15 +435,6 @@ export default function GameDetailPage() {
   const canPlayEffective =
     canPlayBySubscription || hasPurchased || hasActiveRental;
 
-  const runPrePlayAd = useCallback(async () => {
-    if (!game?._id || !isEmbeddable) return;
-    try {
-      await showPrePlayAd({ gameId: String(game._id) });
-    } catch {
-      // Si falla el ad, no bloqueamos el flujo de juego
-    }
-  }, [showPrePlayAd, game?._id, isEmbeddable]);
-
   const canExtend = !hasPurchased && hasActiveRental;
   const requiresPremium =
     isPremiumPlan && profile && profile.role !== "premium" && profile.role !== "admin";
@@ -627,11 +616,10 @@ export default function GameDetailPage() {
     router.push(`/checkout/extender/${game._id}`);
   };
 
-  const handlePlay = async () => {
+  const handlePlay = () => {
     if (!game?._id) return;
     const playUrl = `/play/${game._id}`;
-    const launchPlay = async () => {
-      await runPrePlayAd();
+    const launchPlay = () => {
       if (isEmbeddable) {
         router.push(playUrl);
       } else {
@@ -647,7 +635,7 @@ export default function GameDetailPage() {
 
     // Admin bypass: siempre puede jugar cualquier juego
     if (isAdmin) {
-      await launchPlay();
+      launchPlay();
       return;
     }
 
@@ -655,7 +643,7 @@ export default function GameDetailPage() {
     if (isPremiumPlan) {
       if (isPremiumSub || hasPurchased || hasActiveRental) {
         // Allowed to play
-        await launchPlay();
+        launchPlay();
         return;
       }
       setShowPremiumModal(true);
@@ -664,7 +652,7 @@ export default function GameDetailPage() {
 
     // For free games or owned/rented paid games -> allow play
     if (isFreeToPlay || canPlayEffective) {
-      await launchPlay();
+      launchPlay();
       return;
     }
 
