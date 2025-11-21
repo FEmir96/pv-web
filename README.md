@@ -7,6 +7,11 @@ Front web de PlayVerse (Next.js App Router) que muestra catalogo, fichas de jueg
 - `convex/`: backend Convex compartido (acciones, mutaciones, queries, crons). Si apuntas al deployment remoto no es necesario levantarlo local.
 - `scripts/`: utilidades (ej. clonar datos de Convex).
 
+## 🛠️ Prerrequisitos
+- Node.js 18+ y npm.
+- Credenciales OAuth de Google y Microsoft/Entra (para pruebas locales de login).
+- Opcional: Convex CLI instalada (`npm i -g convex`) si quieres levantar backend local.
+
 ## 🔑 Variables de entorno (poner en `playverse-web/.env.local`)
 Obligatorias para login y datos:
 - `NEXT_PUBLIC_CONVEX_URL` y/o `CONVEX_URL`, `CONVEX_DEPLOYMENT`: apuntan al deployment Convex (local o cloud).
@@ -31,6 +36,7 @@ MICROSOFT_TENANT_ID=common
 NEXT_PUBLIC_TETRIS_URL=https://playverse-demo-games.vercel.app/tetris
 NEXT_PUBLIC_TETRIS_EMBED_URL=https://playverse-demo-games.vercel.app/tetris
 ```
+- Los valores reales (client IDs, secretos) van en tu `.env.local` privado; no se suben al repo. Copia los que te comparta el equipo.
 
 ## 🚀 Como levantarlo local
 1) `cd playverse-web`
@@ -57,6 +63,7 @@ NEXT_PUBLIC_TETRIS_EMBED_URL=https://playverse-demo-games.vercel.app/tetris
 - Notificaciones/bandejas: dropdowns consumen queries/mutaciones de Convex (ver `convex/notifications.ts`, `convex/pushTokens.ts` para backends de notificaciones push usadas por mobile).
 - Preferencias y favoritos: Zustand + Convex (`favoritesStore`, `getFavoritesByUser`, `toggleFavorite`).
 - Checkout y premium: validaciones en `lib/validation.ts` y mutaciones en `convex/transactions.ts` / `convex/mutations/upgradePlan.ts`.
+- Estado esperado al levantar local: la home carga catalogo desde Convex remoto; login OAuth funciona si `NEXTAUTH_SECRET` y las credenciales de Google/Microsoft estan definidas. Sin OAuth, las rutas protegidas devolverán error de autenticacion.
 
 ## 🌟 Dependencias principales
 - Next.js 14 (App Router) + React 18.
