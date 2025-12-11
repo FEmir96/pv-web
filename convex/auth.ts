@@ -1,4 +1,4 @@
-// convex/auth.ts
+﻿// convex/auth.ts
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import bcrypt from "bcryptjs";
@@ -6,6 +6,8 @@ import { sha256Hex } from "./lib/hash";
 import { randomAvatarUrl } from "./lib/avatars";
 
 const MIN_PASSWORD_LENGTH = 6;
+const DEFAULT_STATUS = "Activo";
+const BANNED_STATUS = "Baneado";
 
 export const updateProfile = mutation({
   args: {
@@ -44,8 +46,9 @@ export const createUser = mutation({
     email: v.string(),
     password: v.string(),
     role: v.union(v.literal("free"), v.literal("premium"), v.literal("admin")),
+    status: v.optional(v.union(v.literal(DEFAULT_STATUS), v.literal(BANNED_STATUS))),
   },
-  handler: async ({ db }, { name, email, password, role }) => {
+  handler: async ({ db }, { name, email, password, role, status }) => {
     const normalizedEmail = email.trim().toLowerCase();
     const exists = await db
       .query("profiles")
@@ -57,17 +60,21 @@ export const createUser = mutation({
     const passwordHash = bcrypt.hashSync(password, 10);
     const now = Date.now();
     const avatarUrl = randomAvatarUrl(normalizedEmail);
+    const finalStatus = status ?? DEFAULT_STATUS;
     const _id = await db.insert("profiles", {
       name,
       email: normalizedEmail,
       role,
-      status: "Activo",
+      status: finalStatus,
       createdAt: now,
       passwordHash,
       freeTrialUsed: false,
       avatarUrl,
     });
-    return { ok: true, profile: { _id, name, email: normalizedEmail, role, status: "Activo", createdAt: now } } as const;
+    return {
+      ok: true,
+      profile: { _id, name, email: normalizedEmail, role, status: finalStatus, createdAt: now },
+    } as const;
   },
 });
 
@@ -82,7 +89,8 @@ export const authLogin = mutation({
 
     if (!user) return { ok: false, error: "Usuario no encontrado" } as const;
 
-    if ((user as any).status === "Baneado") {
+    const status = (user as any).status ?? DEFAULT_STATUS;
+    if (status === BANNED_STATUS) {
       return { ok: false, error: "ACCOUNT_BANNED" } as const;
     }
 
@@ -92,8 +100,8 @@ export const authLogin = mutation({
     const match = bcrypt.compareSync(password, user.passwordHash);
     if (!match) return { ok: false, error: "Credenciales invalidas" } as const;
 
-    const { _id, name, role, createdAt, status } = user as any;
-    return { ok: true, profile: { _id, name, email: user.email, role, status: status ?? "Activo", createdAt } } as const;
+    const { _id, name, role, createdAt } = user as any;
+    return { ok: true, profile: { _id, name, email: user.email, role, status, createdAt } } as const;
   },
 });
 
@@ -119,13 +127,17 @@ export const oauthUpsert = mutation({
         name: args.name ?? "",
         email,
         role: "free",
-        status: "Activo",
+        status: DEFAULT_STATUS,
         createdAt: Date.now(),
         passwordHash: undefined,
         avatarUrl: fallbackAvatar,
         freeTrialUsed: false,
       });
-      return { created: true, _id };
+      return { created: true, _id, status: DEFAULT_STATUS };
+    }
+
+    if ((existing as any).status === BANNED_STATUS) {
+      throw new Error("ACCOUNT_BANNED");
     }
 
     const patch: Record<string, unknown> = {};
@@ -137,7 +149,7 @@ export const oauthUpsert = mutation({
     if (Object.keys(patch).length > 0) {
       await db.patch(existing._id, patch);
     }
-    return { created: false, _id: existing._id };
+    return { created: false, _id: existing._id, status: (existing as any).status ?? DEFAULT_STATUS };
   },
 });
 

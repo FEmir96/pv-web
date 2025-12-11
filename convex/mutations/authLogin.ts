@@ -1,7 +1,10 @@
-// convex/mutations/authLogin.ts
+﻿// convex/mutations/authLogin.ts
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import bcrypt from "bcryptjs";
+
+const DEFAULT_STATUS = "Activo";
+const BANNED_STATUS = "Baneado";
 
 export const authLogin = mutation({
   args: {
@@ -20,7 +23,8 @@ export const authLogin = mutation({
       return { ok: false, error: "Usuario no encontrado" } as const;
     }
 
-    if ((user as any).status === "Baneado") {
+    const status = (user as any).status ?? DEFAULT_STATUS;
+    if (status === BANNED_STATUS) {
       return { ok: false, error: "ACCOUNT_BANNED" } as const;
     }
 
@@ -32,16 +36,16 @@ export const authLogin = mutation({
       } as const;
     }
 
-    const match = await bcrypt.compare(password, user.passwordHash);
+    const match = bcrypt.compareSync(password, user.passwordHash);
 
     if (!match) {
       return { ok: false, error: "Credenciales invalidas" } as const;
     }
 
-    const { _id, name, role, createdAt, status } = user as any;
+    const { _id, name, role, createdAt } = user as any;
     return {
       ok: true,
-      profile: { _id, name, email: user.email, role, status: status ?? "Activo", createdAt },
+      profile: { _id, name, email: user.email, role, status, createdAt },
     } as const;
   },
 });
