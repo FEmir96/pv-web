@@ -132,6 +132,7 @@ export default function PremiumPage() {
   ) as ({ _id?: string; role?: "free" | "premium" | "admin"; freeTrialUsed?: boolean } | null | undefined);
 
   const role: "free" | "premium" | "admin" = (profile?.role as any) || "free";
+  const isAdmin = role === "admin";
   const profileLoaded = loginEmail ? profile !== undefined : true;
   const freeTrialUsed = Boolean((profile as any)?.freeTrialUsed);
   const trialAvailable = role !== "premium" && !freeTrialUsed;
@@ -194,11 +195,27 @@ export default function PremiumPage() {
   };
 
   const handleSubscribe = (planId: string) => {
+    if (isAdmin) {
+      toast({
+        title: "Accion no disponible",
+        description: "Los administradores no pueden contratar planes desde la web.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSelectedPlan(planId);
     pushSubscribeIntent(planId, false);
   };
 
   const handleFreeTrial = () => {
+    if (isAdmin) {
+      toast({
+        title: "Accion no disponible",
+        description: "Los administradores no pueden iniciar la prueba gratuita.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!trialAvailable) {
       toast({
         title: "Prueba gratuita ya usada",
@@ -242,12 +259,12 @@ export default function PremiumPage() {
             <Button
               onClick={handleFreeTrial}
               size="lg"
-              disabled={!trialAvailable}
-              className={trialAvailable
+              disabled={!trialAvailable || isAdmin}
+              className={trialAvailable && !isAdmin
                 ? "bg-orange-400 hover:bg-orange-500 text-slate-900 font-semibold px-8 py-4 text-lg"
                 : "bg-slate-700 text-slate-400 font-semibold px-8 py-4 text-lg cursor-not-allowed"}
             >
-              {trialAvailable ? "Prueba gratuita de 7 dias" : "Prueba gratuita ya usada"}
+              {trialAvailable && !isAdmin ? "Prueba gratuita de 7 dias" : "Prueba gratuita no disponible"}
             </Button>
             {trialAvailable && (
               <p className="text-slate-300 text-sm mt-3">
@@ -312,9 +329,16 @@ export default function PremiumPage() {
                 <Button
                   onClick={() => handleSubscribe(plan.id)}
                   variant={isSelected ? "default" : "outline"}
-                  className={isSelected ? "w-full bg-orange-400 text-slate-900 hover:bg-amber-500" : "w-full bg-transparent border-orange-400 text-orange-400 hover:bg-amber-400"}
+                  disabled={isAdmin}
+                  className={
+                    isAdmin
+                      ? "w-full bg-slate-700 text-slate-400 cursor-not-allowed"
+                      : isSelected
+                        ? "w-full bg-orange-400 text-slate-900 hover:bg-amber-500"
+                        : "w-full bg-transparent border-orange-400 text-orange-400 hover:bg-amber-400"
+                  }
                 >
-                  Elegir plan
+                  {isAdmin ? "No disponible para admin" : "Elegir plan"}
                 </Button>
               </div>
             );
@@ -334,12 +358,12 @@ export default function PremiumPage() {
               <Button
                 onClick={handleFreeTrial}
                 size="lg"
-                disabled={!trialAvailable}
-                className={trialAvailable
+                disabled={!trialAvailable || isAdmin}
+                className={trialAvailable && !isAdmin
                   ? "bg-orange-400 hover:bg-orange-500 text-slate-900 font-semibold px-8"
                   : "bg-slate-700 text-slate-400 font-semibold px-8 cursor-not-allowed"}
               >
-                {trialAvailable ? "Comenzar prueba gratuita" : "Prueba gratuita ya usada"}
+                {trialAvailable && !isAdmin ? "Comenzar prueba gratuita" : "Prueba gratuita no disponible"}
               </Button>
             </div>
           </div>
