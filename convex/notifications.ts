@@ -33,7 +33,7 @@ export type NotificationType =
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
 /**
- * Intenta enviar push vía actions/pushy.sendToProfile si hay scheduler disponible.
+ * Intenta enviar push vía actions/expoPush.sendToProfile si hay scheduler disponible.
  * No debe bloquear la creación de la notificación en DB: cualquier fallo queda en try/catch.
  */
 async function schedulePushNotification(
@@ -49,7 +49,7 @@ async function schedulePushNotification(
 ) {
   if (!scheduler) return;
   try {
-    await scheduler.runAfter(0, api.actions.pushy.sendToProfile, {
+    await scheduler.runAfter(0, api.actions.expoPush.sendToProfile, {
       profileId: payload.userId,
       title: payload.title,
       message: payload.message,
@@ -60,7 +60,7 @@ async function schedulePushNotification(
     });
   } catch (error) {
     // No rompemos el flujo si push falla
-    console.error("schedulePushNotification error (pushy)", error);
+    console.error("schedulePushNotification error (expo)", error);
   }
 }
 

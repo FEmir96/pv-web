@@ -18,6 +18,7 @@ import type * as actions_debugSearchIgdb from "../actions/debugSearchIgdb.js";
 import type * as actions_devPlanRemindersNow from "../actions/devPlanRemindersNow.js";
 import type * as actions_devSweepNow from "../actions/devSweepNow.js";
 import type * as actions_email from "../actions/email.js";
+import type * as actions_expoPush from "../actions/expoPush.js";
 import type * as actions_fillUpcomingCoversFromIGDB from "../actions/fillUpcomingCoversFromIGDB.js";
 import type * as actions_getIGDBScreenshots from "../actions/getIGDBScreenshots.js";
 import type * as actions_massBackfillAgeRatings from "../actions/massBackfillAgeRatings.js";
@@ -148,6 +149,7 @@ declare const fullApi: ApiFromModules<{
   "actions/devPlanRemindersNow": typeof actions_devPlanRemindersNow;
   "actions/devSweepNow": typeof actions_devSweepNow;
   "actions/email": typeof actions_email;
+  "actions/expoPush": typeof actions_expoPush;
   "actions/fillUpcomingCoversFromIGDB": typeof actions_fillUpcomingCoversFromIGDB;
   "actions/getIGDBScreenshots": typeof actions_getIGDBScreenshots;
   "actions/massBackfillAgeRatings": typeof actions_massBackfillAgeRatings;

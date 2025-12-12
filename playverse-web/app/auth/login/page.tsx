@@ -103,6 +103,13 @@ export default function LoginPage() {
     if (errorParam === "ACCOUNT_BANNED") {
       setError(bannedMessage);
       toast({ title: "Cuenta suspendida", description: bannedMessage, variant: "destructive" });
+    } else if (errorParam) {
+      const msg =
+        errorParam === "AUTH_ERROR"
+          ? "No se pudo iniciar sesión. Intenta nuevamente o contacta a un administrador."
+          : "No se pudo iniciar sesión. Revisa tus credenciales o intenta nuevamente.";
+      setError(msg);
+      toast({ title: "Error de inicio de sesión", description: msg, variant: "destructive" });
     }
   }, [sp, toast, bannedMessage]);
 

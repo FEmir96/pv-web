@@ -163,7 +163,7 @@ export const updateGame = mutation({
 
         // 📌 Opcional: enviar push instantáneo al admin
         if (scheduler) {
-          scheduler.runAfter(0, api.actions.pushy.sendToProfile, {
+          scheduler.runAfter(0, api.actions.expoPush.sendToProfile, {
             profileId: args.requesterId,
             title: titleMsg,
             message,
